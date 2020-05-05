@@ -1,0 +1,10 @@
+#!/bin/bash
+n="${1:-1}"
+output="$(
+  curl -s "https://www.archlinux.org/feeds/news/" \
+    | xmlstarlet sel -T -t -m /rss/channel/item -v "concat(pubDate,': ',title)" -n \
+    | head -n "$n"
+)"
+echo -e "\e[1;31mhttps://www.archlinux.org/"
+echo "$output"
+echo -en "\e[0m"

@@ -1,0 +1,1535 @@
+#!/bin/bash
+
+# updoot unifies the update process for your entire system
+#
+# Copyright (c) 2018-2020 Maddison Hellstrom (github.com/b0o)
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+set -euo pipefail
+IFS=$'\n\t'
+
+declare -xg base basedir basename
+
+base="$(realpath "${BASH_SOURCE[0]}")"
+basedir="$(dirname "$base")"
+basename="$(basename "$base")"
+
+declare -xg        prog="updoot"
+declare -xg     version="v0.0.1"
+declare -xg     authors=("Maddison Hellstrom <https://github.com/b0o>")
+declare -xg  repository="https://github.com/b0o/updoot"
+declare -xg     license="GPL-3.0-or-later"
+declare -xg license_url="https://www.gnu.org/licenses/gpl-3.0.txt"
+
+# paths
+declare -xg path_config="${XDG_CONFIG_HOME:-$HOME/.config}/$prog" # TODO
+declare -xg path_helpers="$path_config/helpers:$basedir/helpers"
+declare -xg path_providers="$path_config/providers:$basedir/providers"
+
+declare -xg PATH="$path_helpers:$PATH"
+
+# colors
+declare -xg RCol='\e[0m'
+
+# Regular
+declare -xg Bla='\e[0;30m'
+declare -xg Red='\e[0;31m'
+declare -xg Gre='\e[0;32m'
+declare -xg Yel='\e[0;33m'
+declare -xg Blu='\e[0;34m'
+declare -xg Pur='\e[0;35m'
+declare -xg Cya='\e[0;36m'
+declare -xg Whi='\e[0;37m'
+
+# Bold
+declare -xg BBla='\e[1;30m'
+declare -xg BRed='\e[1;31m'
+declare -xg BGre='\e[1;32m'
+declare -xg BYel='\e[1;33m'
+declare -xg BBlu='\e[1;34m'
+declare -xg BPur='\e[1;35m'
+declare -xg BCya='\e[1;36m'
+declare -xg BWhi='\e[1;37m'
+
+# Underline
+declare -xg UBla='\e[4;30m'
+declare -xg URed='\e[4;31m'
+declare -xg UGre='\e[4;32m'
+declare -xg UYel='\e[4;33m'
+declare -xg UBlu='\e[4;34m'
+declare -xg UPur='\e[4;35m'
+declare -xg UCya='\e[4;36m'
+declare -xg UWhi='\e[4;37m'
+
+# High Intensity
+declare -xg IBla='\e[0;90m'
+declare -xg IRed='\e[0;91m'
+declare -xg IGre='\e[0;92m'
+declare -xg IYel='\e[0;93m'
+declare -xg IBlu='\e[0;94m'
+declare -xg IPur='\e[0;95m'
+declare -xg ICya='\e[0;96m'
+declare -xg IWhi='\e[0;97m'
+
+# BoldHigh Intens
+declare -xg BIBla='\e[1;90m'
+declare -xg BIRed='\e[1;91m'
+declare -xg BIGre='\e[1;92m'
+declare -xg BIYel='\e[1;93m'
+declare -xg BIBlu='\e[1;94m'
+declare -xg BIPur='\e[1;95m'
+declare -xg BICya='\e[1;96m'
+declare -xg BIWhi='\e[1;97m'
+
+# Background
+declare -xg On_Bla='\e[40m'
+declare -xg On_Red='\e[41m'
+declare -xg On_Gre='\e[42m'
+declare -xg On_Yel='\e[43m'
+declare -xg On_Blu='\e[44m'
+declare -xg On_Pur='\e[45m'
+declare -xg On_Cya='\e[46m'
+declare -xg On_Whi='\e[47m'
+
+# High Intensity Backgrounds
+declare -xg On_IBla='\e[0;100m'
+declare -xg On_IRed='\e[0;101m'
+declare -xg On_IGre='\e[0;102m'
+declare -xg On_IYel='\e[0;103m'
+declare -xg On_IBlu='\e[0;104m'
+declare -xg On_IPur='\e[0;105m'
+declare -xg On_ICya='\e[0;106m'
+declare -xg On_IWhi='\e[0;107m'
+
+# Status Messages
+declare -xg Ifo="${IGre}[INFO]  ${RCol}"
+declare -xg Wrn="${IYel}[WARN]  ${RCol}"
+declare -xg Err="${IRed}[ERR]   ${RCol}"
+declare -xg Dbg="${ICya}[DEBUG] ${RCol}"
+
+# configuration
+declare -xg UPDOOT_VERBOSE=${UPDOOT_VERBOSE:-0}
+declare -xg UPDOOT_LOG_MAXAGE=${UPDOOT_LOG_MAXAGE:-30}
+declare -xg UPDOOT_STRICT=${UPDOOT_STRICT:-1}
+declare -xg UPDOOT_CACHE_DIR="${UPDOOT_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/update}"
+
+# provider variables
+declare -xg UPDOOT_ARCHLINUX_MIRROR_COUNTRY="${UPDOOT_ARCHLINUX_MIRROR_COUNTRY:-United States}"
+declare -xg UPDOOT_GO_GOPACKAGES_PATH="${UPDOOT_GO_GOPACKAGES_PATH:-$HOME/.gopackages}"
+
+if [[ ! -v UPDOOT_PROVIDERS_ENABLED ]]; then
+  # TODO: auto-detect supported providers
+  declare -xga UPDOOT_PROVIDERS_ENABLED=(
+    "archlinux"
+    "asdf"
+    "cabal"
+    "rust"
+    "gem"
+    "go"
+    "npm"
+    "yarn"
+    "opam"
+    "pip"
+    "nvim"
+    "zsh"
+  )
+fi
+
+# exit status codes
+declare -rxg C_USAGE=60
+declare -rxg C_SKIP=61
+declare -rxg C_UNKNOWN=62
+declare -rxg C_USAGE_ERR=70
+declare -rxg C_DEP_NOTFOUND=71
+declare -rxg C_CONFIG_ERR=72
+declare -rxg C_UPDATE_ERR=73
+declare -rxg C_INT=130
+
+# providers registry
+declare -xgA PROVIDERS=()
+declare -xgA PROVIDERS_USAGE=()
+
+# global state
+declare -xg global_start_time
+declare -xg update_provider
+declare -xgi update_index=0
+declare -xgi update_total=0
+declare -xgi update_success=0
+declare -xgi update_skip=0
+declare -xgi update_fail=0
+
+# --- utils
+
+function log_msg() {
+  echo -e "$*" >&2
+}
+export -f log_msg
+
+function vlog_msg() {
+  if [[ $UPDOOT_VERBOSE -eq 1 ]]; then
+    log_msg "$@"
+  fi
+}
+export -f vlog_msg
+
+function handle_sig() {
+  local msg_proc="Process"
+  local code=1
+  local opt OPTARG OPTIND
+  OPTIND=1
+  while getopts "cx:" opt "$@"; do
+    case $opt in
+    c)
+      msg_proc="Child process"
+      ;;
+    x)
+      code=$OPTARG
+      ;;
+    \?)
+      break
+      ;;
+    esac
+  done
+  shift $((OPTIND - 1))
+
+  local sig="${1:-UNKNOWN}"
+  log_msg "\\n${Wrn}$msg_proc caught ${Yel}SIG${sig}${RCol}"
+  exit "$code"
+}
+export -f handle_sig
+
+function choose() {
+  local prompt="Choose"
+  local -a args=("yes" "No")
+
+  [[ $# -gt 0 ]] && {
+    [[ $1 != "-" ]] && prompt="$1"
+    shift
+  }
+  [[ $# -gt 0 ]] && args=("$@")
+
+  local -a opts=()
+  local -A opt_strs_l=()
+  local -A opt_strs_r=()
+  local opt_default
+
+  local msg=""
+
+  for arg in "${args[@]}"; do
+    [[ -z "$arg" ]] && {
+      log_msg "${Err}choose: Empty option"
+      echo "?"
+      return 1
+    }
+
+    local opt_key
+    local opt_str_l
+    local opt_str_r
+
+    if [[ $arg =~ (.*)\[(.)\](.*) ]]; then
+      opt_key="${BASH_REMATCH[2]}"
+      opt_str_l="${BASH_REMATCH[1]}"
+      opt_str_r="${BASH_REMATCH[3]}"
+    else
+      opt_key="${arg:0:1}"
+      opt_str_l=""
+      opt_str_r="${arg:1}"
+    fi
+
+    [[ -v opt_strs_l["$opt_key"] ]] && {
+      log_msg "${Err}choose: Duplicate option with key ${Yel}${opt_key}${RCol}"
+      echo "?"
+      return 1
+    }
+
+    opts+=("$opt_key")
+    opt_strs_l["$opt_key"]="$opt_str_l"
+    opt_strs_r["$opt_key"]="$opt_str_r"
+
+    [[ "$opt_key" =~ ^[A-Z]$ ]] && {
+      [[ -v opt_default ]] && {
+        log_msg "${Err}choose: Expected at most one default option"
+        echo "?"
+        return 1
+      }
+      opt_default="$opt_key"
+    }
+
+    [[ -n "$msg" ]] && msg+=" / "
+    msg+="${RCol}"
+    [[ -v opt_default && "$opt_key" == "$opt_default" ]] && msg+="${Blu}"
+    msg+="${opt_strs_l["$opt_key"]}${RCol}["
+    [[ -v opt_default && "$opt_key" == "$opt_default" ]] && msg+="${Blu}"
+    msg+="${opt_key}${RCol}]"
+    [[ -v opt_default && "$opt_key" == "$opt_default" ]] && msg+="${Blu}"
+    msg+="${opt_strs_r["$opt_key"]}${RCol}"
+  done
+
+  [[ ${#opts[@]} -lt 2 ]] && {
+    log_msg "${Err}choose: Expected at least two options"
+    echo "?"
+    return 1
+  }
+
+  while true; do
+    log_msg "${prompt} ${msg}"
+    read -rp "> " yn
+    local choice
+    if [[ -v opt_strs_l["${yn^}"] ]]; then
+      choice="${yn^}"
+    elif [[ -v opt_strs_l["${yn,}"] ]]; then
+      choice="${yn,}"
+    elif [[ -z "$yn" ]]; then
+      [[ ! -v opt_default ]] && {
+        log_msg "Choice required"
+        continue
+      }
+      choice="$opt_default"
+    else
+      log_msg "Invalid choice: ${Red}${yn}${RCol}"
+      continue
+    fi
+
+    echo "$choice"
+    return 0
+  done
+  echo "?"
+  return 1
+}
+export -f choose
+
+function cmd_exists() {
+  local cmd="${1:-}"
+  if [[ -z "$cmd" ]]; then
+    log_msg "${Err}No command specified."
+    return 1
+  fi
+  command -v "${cmd}" > /dev/null || {
+    log_msg "${Wrn}Candidate not found: '${Yel}${cmd}${RCol}'."
+    return 1
+  }
+  log_msg "${Ifo}Using '${Cya}${cmd}${RCol}'."
+}
+export -f cmd_exists
+
+function run_cmd() {
+  ({
+    IFS=$' '
+    vlog_msg "${Dbg}run_cmd ${Yel}$*${RCol}"
+  })
+  "$@"
+  code=$?
+  if [[ $code -ne 0 ]]; then
+    log_msg "${Wrn}Command '${Yel}${*}${RCol}' exited with code ${Yel}${code}${RCol}"
+    return $C_UPDATE_ERR
+  fi
+  return 0
+}
+export -f run_cmd
+
+function systemctl_service_pause() {
+  local service="$1"
+  if cmd_exists systemctl &> /dev/null; then
+    if systemctl --user is-active -q "$service"; then
+      if systemctl --user stop -q "$service"; then
+        log_msg "${Ifo}Paused ${Pur}${service}${RCol}"
+        return 0
+      fi
+    fi
+  fi
+  return 1
+}
+export -f systemctl_service_pause
+
+function systemctl_service_resume() {
+  local service="$1"
+  if cmd_exists systemctl &> /dev/null; then
+    if run_cmd systemctl --user start -q "$service"; then
+      log_msg "${Ifo}Resumed ${Pur}${service}${RCol}"
+      return 0
+    fi
+  fi
+  return 1
+}
+export -f systemctl_service_resume
+
+function handle_exit() {
+  local code=$?
+  vlog_msg "${Dbg}handle_exit: code ${Yel}${code}${RCol}"
+  case $code in
+  $C_USAGE)
+    exit 0
+    ;;
+  $C_USAGE_ERR) ;&
+  $C_CONFIG_ERR)
+    exit 1
+    ;;
+  esac
+
+  update_skip=$((update_skip + update_total - update_index))
+
+  # TODO: move to cleanup
+  # TODO: don't hardcode regexes
+  mapfile -t old < <(find "${UPDOOT_CACHE_DIR}" \
+    -depth -maxdepth 1 -type f -mtime "+${UPDOOT_LOG_MAXAGE}" \
+    -and \( -name 'update_*.log' -or -name 'update_pip_*_freeze.txt' \))
+
+  if [[ ${#old[@]} -gt 0 ]]; then
+    log_msg "${Ifo}Purging ${Cya}${#old[@]}${RCol} log files older than ${Pur}${UPDOOT_LOG_MAXAGE}${RCol} days."
+    rm "${old[@]}"
+  fi
+
+  local now total_elapsed
+  now=$(date +%s)
+  total_elapsed=$((now - global_start_time))
+
+  local skipmsg=""
+  if [[ $update_skip -gt 0 ]]; then
+    skipmsg="${Yel}${update_skip} skipped${RCol}"
+  fi
+
+  local failmsg=""
+  if [[ $update_fail -gt 0 ]]; then
+    failmsg="${Red}${update_fail} failed${RCol}"
+  fi
+
+  local successmsg="${Blu}${update_success} updated${RCol}"
+
+  local statusmsg="$successmsg"
+  if [[ -n "$statusmsg" && -n "$skipmsg" ]]; then
+    statusmsg+=", "
+  fi
+  statusmsg+="$skipmsg"
+  if [[ -n "$statusmsg" && -n "$failmsg" ]]; then
+    statusmsg+=", "
+  fi
+  statusmsg+="$failmsg"
+
+  log_msg "${Ifo}Completed in ${Cya}${total_elapsed} seconds${RCol} (${statusmsg})"
+
+  exit $code
+}
+
+function provider_usage() {
+  local name="${1:-${update_provider:-}}"
+  if ! [[ -v "PROVIDERS_USAGE[$name]" ]]; then
+    log_msg "${Err}provider_usage: unknown provider ${Yel}$name${RCol}"
+    exit $C_USAGE_ERR
+  fi
+  local -a usage
+  mapfile -t usage << EOF
+usage: $prog $name
+${PROVIDERS_USAGE[$name]}
+EOF
+  printf '%s\n' "${usage[@]}" >&2
+}
+export -f provider_usage
+
+function register_provider() {
+  local func name
+  case $# in
+  0)
+    log_msg "${Err}register_provider: expected argument"
+    exit $C_CONFIG_ERR
+    ;;
+  1)
+    func="$1"
+    name="$1"
+    ;;
+  2)
+    func="$1"
+    name="$2"
+    ;;
+  *)
+    log_msg "${Err}register_provider: expected 1 or 2 arguments, got ${Yel}$#${RCol} (${Yel}$*${RCol})"
+    exit $C_CONFIG_ERR
+    ;;
+  esac
+
+  if [[ $(type -t "$func") != 'function' ]]; then
+    log_msg "${Err}register_provider: not a function: ${Yel}${func}${RCol}"
+    exit $C_CONFIG_ERR
+  fi
+
+  PROVIDERS["$name"]="$func"
+
+  if read -rt 0; then
+    PROVIDERS_USAGE["$name"]="$(cat)"
+  fi
+
+  if [[ "$name" != "$func" ]]; then
+    vlog_msg "${Dbg}Registered provider: ${Cya}${name}${RCol} -> ${Pur}${func}${RCol}"
+  else
+    vlog_msg "${Dbg}Registered provider: ${Cya}${name}${RCol}"
+  fi
+}
+
+# --- dummy providers
+
+function update_dummy() {
+  log_msg "${Ifo}dummy"
+  return 0
+}
+register_provider update_dummy dummy
+
+function update_dummy_fail() {
+  log_msg "${Ifo}dummy_fail"
+  return 1
+}
+register_provider update_dummy_fail dummy_fail
+
+# --- providers
+
+function update_archlinux() {
+  if ! cmd_exists pacman &> /dev/null; then
+    return $C_DEP_NOTFOUND
+  fi
+  local -i tasklist_modified=0
+  local -i task_news=1
+  local -i task_yay=1
+  local -i task_pacman=1
+  local -i task_powerpill=1
+  local -i task_mirrorlist=1
+  local -i task_pacdiff=1
+  local opt OPTARG OPTIND
+  OPTIND=1
+  while getopts ":hanypmdNYPMDL" opt "$@"; do
+    case "$opt" in
+    h)
+      provider_usage
+      return $C_USAGE
+      ;;
+    a)
+      task_news=1
+      task_yay=1
+      task_pacman=1
+      task_powerpill=1
+      task_mirrorlist=1
+      task_pacdiff=1
+      ;;
+    n | y | p | m | d)
+      if [[ $tasklist_modified -eq 0 ]]; then
+        tasklist_modified=1
+        task_news=0
+        task_yay=0
+        task_pacman=0
+        task_mirrorlist=0
+        task_pacdiff=0
+      fi
+      ;;& # continue matching
+    n)
+      task_news=1
+      ;;
+    N)
+      task_news=0
+      ;;
+    y)
+      task_yay=1
+      ;;
+    Y)
+      task_yay=0
+      ;;
+    p)
+      task_pacman=1
+      ;;
+    P)
+      task_pacman=0
+      ;;
+    m)
+      task_mirrorlist=1
+      ;;
+    M)
+      task_mirrorlist=0
+      ;;
+    d)
+      task_pacdiff=1
+      ;;
+    D)
+      task_pacdiff=0
+      ;;
+    L)
+      task_powerpill=0
+      ;;
+    \?)
+      log_msg "${Err}${Cya}archlinux${RCol}: invalid option: ${Yel}${OPTARG}${RCol}"
+      return $C_USAGE_ERR
+      ;;
+    esac
+  done
+
+  local newscachefile newsout newsdiff
+  if ((task_news)); then
+    if cmd_exists archlinux-news; then
+      newscachefile="$UPDOOT_CACHE_DIR/archlinux-news"
+      if [[ ! -s $newscachefile ]]; then
+        touch "$newscachefile"
+      fi
+      newsout="$(archlinux-news 10)"
+      newsdiff=$(diff --old-line-format='' --unchanged-line-format='' --new-line-format='%L' -Z "$newscachefile" <(echo "$newsout")) || :
+      if [[ $newsdiff != "" ]]; then
+        log_msg "${Wrn}New '${UCya}https://archlinux.org${RCol}' news item(s) since last update:"
+        log_msg "${Red}${newsdiff}${RCol}"
+        if [[ $(choose "Continue with archlinux update?") != "y" ]]; then
+          log_msg "${Wrn}Skipping..."
+          return $C_SKIP
+        fi
+      else
+        log_msg "${Ifo}No unread news items from ${UCya}https://archlinux.org${RCol}"
+      fi
+    else
+      log_msg "${Wrn}${Yel}archlinux-news${RCol} helper script not found; It is recommended to check ${UCya}https://archlinux.org${RCol} for news prior to updating"
+      if [[ "$(choose "Continue with archlinux update?")" != "y" ]]; then
+        return $C_SKIP
+      fi
+    fi
+  fi
+
+  if ((task_yay || task_pacman)); then
+    if ((task_yay)) && cmd_exists yay; then
+      if ((task_powerpill)) && cmd_exists powerpill; then
+        run_cmd yay --pacman=powerpill -Syyu
+      else
+        run_cmd yay -Syyu
+      fi
+    elif ((task_pacman)) && cmd_exists pacman; then
+      run_cmd sudo pacman -Syu
+    else
+      return $C_DEP_NOTFOUND
+    fi
+  fi
+
+  if ((task_mirrorlist)) && cmd_exists archlinux-mirrors; then
+    if ((task_powerpill)) && cmd_exists powerpill &> /dev/null; then
+      run_cmd sudo archlinux-mirrors --powerpill --pacman --country "$UPDOOT_ARCHLINUX_MIRROR_COUNTRY"
+    else
+      run_cmd sudo archlinux-mirrors --pacman --country "$UPDOOT_ARCHLINUX_MIRROR_COUNTRY"
+    fi
+  fi
+
+  if ((task_pacdiff)) && cmd_exists pacdiff; then
+    # use sudo -E so that user's DIFFTOOL is preserved
+    run_cmd sudo -E pacdiff
+  fi
+
+  if [[ -n "${newsout:-}" ]]; then
+    echo "$newsout" > "$newscachefile"
+  fi
+  return 0
+}
+register_provider update_archlinux archlinux << EOF
+Updates Arch Linux & performs routine maintenence like updating mirrorlist & managing .pac{new,save} files
+Dependencies:
+  Primary: (at least one; ordered by precedence)
+    - yay (aur: yay) (https://github.com/Jguer/yay)
+    or
+    - pacman
+  Required:
+    - sudo (arch-repo: sudo) (https://www.sudo.ws)
+  Optional:
+    - archlinux-news
+      Automatically check for unread RSS items from the archlinux.org news feed
+      Dependencies:
+        - curl (arch-repo: curl) (https://curl.haxx.se)
+        - xmlstarlet (arch-repo: xmlstarlet) (https://xmlstar.sourceforge.net)
+    - powerpill (aur: powerpill) (https://xyne.archlinux.ca/projects/powerpill)
+      Pacman wrapper for faster downloads.
+    - reflector (arch-repo: reflector) (https://xyne.archlinux.ca/projects/reflector)
+      Finds the fastest mirrors and updates mirrorlist for pacman and powerpill.
+    - pacdiff (arch-repo: pacman-contrib) (https://git.archlinux.org/pacman-contrib.git/about)
+      A simple program to merge or remove pacnew/pacsave files.
+
+Options:
+  General:
+  :h   display usage information
+  :a   enable all tasks (default)
+
+  Enable tasks exclusively:
+  :n   archlinux-news
+  :y   yay
+  :p   pacman
+  :m   archlinux-mirrors
+  :d   pacdiff
+
+  Exclude tasks:
+  :N   archlinux-news
+  :Y   yay
+  :P   pacman
+  :M   archlinux-mirrors
+  :D   pacdiff
+  :L   powerpill
+
+Environment Variables:
+  \$UPDOOT_ARCHLINUX_MIRROR_COUNTRY (country name) [$UPDOOT_ARCHLINUX_MIRROR_COUNTRY]
+    Country to select mirrors from.
+    Must match the format used in /etc/pacman.d/mirrorlist
+
+EOF
+
+function update_asdf() {
+  if cmd_exists asdf; then
+    run_cmd asdf update
+    run_cmd asdf plugin-update --all
+  else
+    return $C_DEP_NOTFOUND
+  fi
+}
+register_provider update_asdf asdf << EOF
+Extendable version manager with support for Ruby, Node.js, Elixir, Erlang & more
+Dependencies:
+  - asdf (aur: asdf-vm) (https://github.com/asdf-vm/asdf)
+EOF
+
+function update_cabal() {
+  if cmd_exists cabal; then
+    run_cmd cabal v1-update
+  else
+    return $C_DEP_NOTFOUND
+  fi
+}
+register_provider update_cabal cabal << EOF
+A system for building and packaging Haskell libraries and programs
+Dependencies:
+  - cabal-install (arch-repo: cabal-install) (https://github.com/haskell/cabal/blob/master/cabal-install/README.md)
+EOF
+
+function update_rust() {
+  local n=0
+  if cmd_exists cargo; then
+    n=$((n + 1))
+    run_cmd cargo install-update -a
+  fi
+  if cmd_exists rustup; then
+    n=$((n + 1))
+    run_cmd rustup self upgrade-data
+    # run_cmd rustup self update
+    run_cmd rustup update
+  fi
+  [[ $n -gt 0 ]] || return $C_DEP_NOTFOUND
+}
+register_provider update_rust rust << EOF
+A multi-paradigm system programming language
+Dependencies:
+  Primary: (at least one)
+    - rustup (arch-repo: rustup) (https://rustup.rs/) (recommended)
+      Rust toolchain installer
+      Includes: cargo, rustup
+    or
+    - rust (arch-repo: rust) (https://www.rust-lang.org/)
+      Rust toolchain
+      Includes: cargo
+  cargo crates:
+    - cargo-update (https://github.com/nabijaczleweli/cargo-update)
+      A cargo subcommand for checking and applying updates to installed executables
+EOF
+
+function update_cpan() {
+  if cmd_exists cpan; then
+    run_cmd cpan -u
+  else
+    return $C_DEP_NOTFOUND
+  fi
+}
+register_provider update_cpan cpan << EOF
+A repository of software modules written in the Perl programming language
+Dependencies:
+  - cpan (arch-repo: perl) (https://www.perl.org)
+EOF
+
+function update_gem() {
+  if cmd_exists gem; then
+    run_cmd gem update
+  else
+    return $C_DEP_NOTFOUND
+  fi
+}
+register_provider update_gem gem << EOF
+A package manager for the Ruby programming language
+Dependencies:
+  - gem (arch-repo: rubygems) (https://rubygems.org/)
+EOF
+
+function update_go() {
+  local success=1
+  local fail=0
+  if ! cmd_exists go; then
+    return $C_DEP_NOTFOUND
+  fi
+  if [[ ! -r "$UPDOOT_GO_GOPACKAGES_PATH" ]]; then
+    log_msg "${Err}Unable to read file ${Yel}${UPDOOT_GO_GOPACKAGES_PATH}${RCol} (${Cya}\$UPDOOT_GO_GOPACKAGES_PATH${RCol})"
+    return $C_CONFIG_ERR
+  fi
+
+  # shellcheck disable=1090
+  source "$UPDOOT_GO_GOPACKAGES_PATH"
+  if [[ ! -v "GO_BIN_PKGS" || ${#GO_BIN_PKGS[@]} -eq 0 ]]; then
+    log_msg "${Ifo}Nothing to do"
+    return 0
+  fi
+
+  local gocmd="go get -u -v"
+
+  local gobincmd="gobin -u"
+  local gobin=0
+  if cmd_exists gobin; then
+    gobin=1
+  fi
+
+  local -a pkgs
+  local -A pkgs_str
+  local -A pkgs_name
+  local -A pkgs_cmd
+  local pkg
+  for pkg in "${GO_BIN_PKGS[@]}"; do
+    local pkg_cmd pkg_name pkg_str pkg_ver
+    pkgpath="${pkg//@*/}"
+    pkg_name="${pkgpath//*\//}"
+    pkg_ver="$(awk 'match($0, /@.*$/){ v=substr($0, RSTART); if(v == "@"){ v="@latest" }; print v }' <<< "$pkg")"
+    pkg_str="${Cya}${pkgpath}${Yel}${pkg_ver}${RCol}"
+
+    if [[ $pkg_ver != "" ]]; then
+      if [[ $gobin -eq 1 ]]; then
+        pkg_cmd="$gobincmd ${pkgpath}${pkg_ver}"
+      else
+        log_msg "${Err}${pkg_str}: ${Cya}gobin${RCol} is required for ${Cya}package${Yel}@version${RCol}-style packages"
+        return $C_DEP_NOTFOUND
+      fi
+    else
+      pkg_cmd="$gocmd ${pkgpath}"
+    fi
+    pkgs+=("$pkg")
+    pkgs_str["$pkg"]="$pkg_str"
+    pkgs_name["$pkg"]="$pkg_name"
+    pkgs_cmd["$pkg"]="$pkg_cmd"
+  done
+
+  local goservice="go.target"
+  local -i service_paused=0
+  if systemctl_service_pause "$goservice"; then
+    service_paused=1
+  fi
+
+  # XXX: there is probably a race condition where multiple calls to `go get`
+  # may try to update the same dependency at the same time, leading to
+  # `git pull` complaining about overwriting local changes. Not sure how to
+  # fix other than reverting to updating packages serially
+  for pkg in "${pkgs[@]}"; do
+    ({
+      local pkg_cmd pkg_name pkg_str
+      pkg_str="${pkgs_str["$pkg"]}"
+      pkg_name="${pkgs_name["$pkg"]}"
+      pkg_cmd="${pkgs_cmd["$pkg"]}"
+
+      set +o pipefail
+      log_msg "${Ifo}Getting ${pkg_str}..."
+
+      local tmp
+      tmp="$(mktemp -t "update_go_${pkg_name}.XXXXXX")"
+      # shellcheck disable=2064
+      trap "rm $tmp" EXIT
+      eval "$pkg_cmd" 2> "$tmp" > /dev/null || {
+        cat "$tmp" >&2
+        log_msg "${Wrn}Failed updating/installing package ${pkg_str}"
+        return $C_SKIP
+      }
+      log_msg "${Ifo}Finished ${pkg_str}"
+      return 0
+    }) &
+  done
+
+  for job in $(jobs -pr); do
+    if wait -f "$job"; then
+      success=$((success + 1))
+    else
+      fail=$((fail + 1))
+    fi
+  done
+
+  if [[ $service_paused -eq 1 ]]; then
+    systemctl_service_resume "$goservice"
+  fi
+
+  local statusmsg="${Blu}${success} updated${RCol}"
+  if [[ $fail -gt 0 ]]; then
+    statusmsg+=", ${Red}${fail} failed${RCol}"
+  fi
+
+  if [[ $success -eq 0 ]]; then
+    log_msg "${Wrn}No Go packages were updated (${statusmsg})"
+    if [[ $fail -gt 0 ]]; then
+      return $C_UPDATE_ERR
+    fi
+  else
+    log_msg "${Ifo}Go update complete (${statusmsg})"
+    if [[ $fail -gt 0 ]]; then
+      return $C_SKIP
+    fi
+  fi
+}
+register_provider update_go go << EOF
+A package manager for the Go programming language
+Dependencies:
+  Primary:
+    - go (arch-repo: go) (https://golang.org/)
+  Optional:
+    - gobin (https://github.com/myitcv/gobin)
+      The gobin command installs/runs main packages
+      Required for path@version packages, as described in UPDOOT_GO_GOPACKAGES_PATH
+
+Environment Variables:
+  \$UPDOOT_GO_GOPACKAGES_PATH (directory) [$UPDOOT_GO_GOPACKAGES_PATH]
+    Path to a POSIX shell file containing an array named GO_BIN_PKGS
+    Array items consist of a Go package path, optionally followed by an @, optionally followed by a version.
+    A package followed by an @ with no version implies the latest version.
+    A package not followed by an @ will be fetched with go get rather than gobin
+EOF
+
+function update_npm() {
+  if cmd_exists npm; then
+    run_cmd npm --global install npm
+    run_cmd npm --global update
+  else
+    return $C_DEP_NOTFOUND
+  fi
+}
+register_provider update_npm npm << EOF
+A package manager for Node.js / JavaScript
+Dependencies:
+  - npm (arch-repo: npm) (https://npmjs.com)
+EOF
+
+function update_opam() {
+  if cmd_exists opam; then
+    run_cmd opam update
+    run_cmd opam upgrade
+  else
+    return $C_DEP_NOTFOUND
+  fi
+}
+register_provider update_opam opam << EOF
+A package manager for the OCaml programming language
+Dependencies:
+  - opam (arch-repo: opam) (https://opam.ocaml.org/)
+EOF
+
+function update_pip() {
+  if cmd_exists pip; then
+    local outdated
+    outdated="$(pip list --user --outdated --format=freeze)" || return $C_UPDATE_ERR
+    if [[ -n "$outdated" ]]; then
+      echo "$outdated" > "$UPDOOT_CACHE_DIR/update_pip_${global_start_time}_freeze.txt"
+      echo "$outdated" | sed 's/=.*$//' | while read -r pkg; do
+        run_cmd pip install --user --upgrade "$pkg"
+      done
+    fi
+  else
+    return $C_DEP_NOTFOUND
+  fi
+  if cmd_exists pipx; then
+    run_cmd pipx upgrade-all
+  fi
+}
+register_provider update_pip pip << EOF
+A package manager for the Python programming language
+Dependencies:
+  Primary:
+    - pip (arch-repo: python-pip) (https://pip.pypa.io)
+  Optional:
+    - pipx (https://github.com/pipxproject/pipx)
+EOF
+
+function update_nvim() {
+  local -i tasklist_modified=0
+  local -i task_clean=0
+  local -i task_update=1
+  local -i task_install=0
+  local opt OPTARG OPTIND
+  OPTIND=1
+  while getopts ":hacuiCUI" opt "$@"; do
+    case "$opt" in
+    h)
+      provider_usage
+      return $C_USAGE
+      ;;
+    a)
+      task_clean=1
+      task_update=1
+      task_install=1
+      ;;
+    C | u | I)
+      if [[ $tasklist_modified -eq 0 ]]; then
+        tasklist_modified=1
+        task_clean=0
+        task_update=0
+      fi
+      ;;& # continue matching
+    c)
+      task_clean=1
+      ;;
+    C)
+      task_clean=1
+      ;;
+    u)
+      task_update=1
+      ;;
+    U)
+      task_update=0
+      ;;
+    i)
+      task_install=1
+      ;;
+    I)
+      task_install=1
+      ;;
+    \?)
+      log_msg "${Err}${Cya}nvim${RCol}: invalid option: ${Yel}${OPTARG}${RCol}"
+      return $C_USAGE_ERR
+      ;;
+    esac
+  done
+
+  local -a upd_cmd=()
+  if ((task_clean)); then
+    mapfile -tO ${#upd_cmd[@]} upd_cmd << EOF
+if (exists("*PluginCleanHeadless"))
+  echom "Cleaning Plugins..."
+  call PluginCleanHeadless()
+else
+  echo "Function not found: PluginCleanHeadless()\n"
+  cquit!
+endif
+EOF
+  fi
+  if ((task_update)); then
+    mapfile -tO ${#upd_cmd[@]} upd_cmd << EOF
+if (exists("*PluginUpdateHeadless"))
+  echom "Updating Plugins..."
+  call PluginUpdateHeadless()
+else
+  echo "Function not found: PluginUpdateHeadless()\n"
+  cquit!
+endif
+EOF
+  fi
+  if ((task_install)); then
+    mapfile -tO ${#upd_cmd[@]} upd_cmd << EOF
+if (exists("*PluginInstallHeadless"))
+  echom "Installing Plugins..."
+  call PluginInstallHeadless()
+else
+  echo "Function not found: PluginInstallHeadless()\n"
+  cquit!
+endif
+EOF
+  fi
+  if [[ ${#upd_cmd[@]} -eq 0 ]]; then
+    log_msg "${Wrn}nothing to do"
+  fi
+  mapfile -tO ${#upd_cmd[@]} upd_cmd << EOF
+quit!
+EOF
+  if cmd_exists nvim; then
+    run_cmd nvim --headless -c "${upd_cmd[*]}"
+  else
+    return $C_DEP_NOTFOUND
+  fi
+}
+register_provider update_nvim nvim << EOF
+The Neovim text editor
+Dependencies:
+  - nvim (arch-repo: neovim) (https://neovim.io)
+
+Note:
+  Expects your neovim configuration to define the following functions:
+    - PluginCleanHeadless()
+    - PluginUpdateHeadless()
+    - PluginInstallHeadless()
+
+Options:
+  General:
+  :h   display usage information
+  :a   enable all tasks
+
+  Enable tasks inclusively:
+  :c   clean
+  :i   install
+
+  Enable tasks exclusively:
+  :C   clean
+  :u   update
+  :I   install
+
+  Exclude tasks:
+  :U   update
+EOF
+
+function update_yarn() {
+  if cmd_exists yarn; then
+    run_cmd yarn global upgrade-interactive --latest
+  else
+    return $C_DEP_NOTFOUND
+  fi
+}
+register_provider update_yarn yarn << EOF
+Fast, reliable, and secure dependency management for Node.js
+Dependencies:
+  - yarn (arch-repo: yarn) (https://yarnpkg.com)
+EOF
+
+function update_zsh() {
+  if ! cmd_exists zsh; then
+    return $C_DEP_NOTFOUND
+  fi
+
+  local module=0
+  local opt OPTARG OPTIND
+  OPTIND=1
+  while getopts ":ham" opt "$@"; do
+    case "$opt" in
+    h)
+      provider_usage zsh
+      return $C_USAGE
+      ;;
+    a)
+      module=1
+      ;;
+    m)
+      module=1
+      ;;
+    \?)
+      log_msg "${Err}${Cya}zsh${RCol}: invalid option: ${Yel}${OPTARG}${RCol}"
+      return $C_USAGE_ERR
+      ;;
+    esac
+  done
+
+  local -a upd_cmd
+  mapfile -t upd_cmd << EOF
+    $(declare -f log_msg)
+    $(declare -f vlog_msg)
+    $(declare -f cmd_exists)
+    $(declare -f run_cmd)
+    local n=0
+    if cmd_exists upgrade_oh_my_zsh; then
+      n=\$((n + 1))
+      run_cmd upgrade_oh_my_zsh
+    fi
+    if cmd_exists zinit; then
+      n=\$((n + 1))
+      run_cmd zinit self-update
+      if [[ $module -eq 1 ]]; then
+        run_cmd zinit module build
+      fi
+      run_cmd zinit update --all # --parallel 16
+    fi
+    [[ \$n -gt 0 ]] || return $C_DEP_NOTFOUND
+EOF
+  run_cmd zsh -ic "${upd_cmd[*]}"
+}
+register_provider update_zsh zsh << EOF
+A very advanced and programmable command interpreter (shell) for UNIX
+Dependencies:
+  Primary: (at least one)
+    - oh-my-zsh (https://github.com/ohmyzsh/ohmyzsh)
+    and/or
+    - zinit (https://github.com/zdharma/zinit)
+  Required:
+    - zsh (arch-repo: zsh) (https://zsh.org)
+EOF
+
+# --- business logic
+
+function usage() {
+  local detailed=0
+  if [[ $# -gt 0 && $1 == "-H" ]]; then
+    detailed=1
+  fi
+  local -a usage
+  mapfile -t usage << EOF
+$prog $version
+$repository
+
+Unify the update process for your entire system.
+
+Usage:
+  $prog [options] [--] [provider-spec ...]
+
+  Where [provider-spec] is one of:
+    ++provider   inclusive: enable this provider in addition to the default providers
+     +provider
+
+      provider   exclusive: enable this provider, disabling default providers
+
+    --provider   ignore this provider from the default providers
+     -provider   (after --, see below)
+
+  A lone -- indicates the end of the options, thereafter allowing the use of a single leading - to
+  ignore providers as described above.
+
+Options:
+  -h       show brief usage information
+  -H       show detailed usage information
+  -V       show program version
+  -s       enable strict mode
+  -v       enable verbose output
+
+EOF
+
+  if [[ $detailed -eq 1 ]]; then
+    mapfile -tO ${#usage[@]} usage << EOF
+Screencast:
+  https://asciinema.org/a/191154
+
+Environment Variable:
+  Global:
+    \$UPDOOT_PROVIDERS_ENABLED (string array)
+      The providers to be enabled by default.
+
+    \$UPDOOT_LOG_MAXAGE (int) [$UPDOOT_LOG_MAXAGE]
+      Maximum age of log files in days
+
+    \$UPDOOT_STRICT (bool, 0 or 1) [$UPDOOT_STRICT]
+      If true, a failure in any part of any update will end the entire update process.
+      If false, certain tolerable errors will be treated as warnings.
+
+    \$UPDOOT_VERBOSE (bool, 0 or 1) [$UPDOOT_VERBOSE]
+      If true, output additional status information to stderr.
+
+    \$UPDOOT_CACHE_DIR (directory) [$UPDOOT_CACHE_DIR]
+      Directory in which to place log/runtime files
+
+Dependencies:
+  Global:
+     - moment-cli (https://www.npmjs.com/package/moment-cli)
+     - termcolors (https://gist.github.com/08007d77853fcea5ca669e6800844c06)
+     - git (https://git-scm.com)
+
+EOF
+  fi
+
+  mapfile -tO ${#usage[@]} usage << EOF
+Available Providers: (* indicates provider is enabled by default)
+EOF
+
+  if [[ ${#PROVIDERS[@]} -eq 0 ]]; then
+    usage+=("  none")
+  else
+    for p in "${!PROVIDERS[@]}"; do
+      local s="- $p"
+      local e
+      for e in "${UPDOOT_PROVIDERS_ENABLED[@]}"; do
+        if [[ "$p" == "$e" ]]; then
+          s="* $p"
+          break
+        fi
+      done
+      usage+=("  $s")
+      if [[ $detailed -eq 1 ]]; then
+        if [[ -v "PROVIDERS_USAGE[$p]" && -n "${PROVIDERS_USAGE[$p]}" ]]; then
+          local -a u
+          mapfile -t u <<< "${PROVIDERS_USAGE[$p]}"
+          usage+=("$(printf "    %s\n" "${u[@]}")")
+        fi
+        usage+=("")
+      fi
+    done
+  fi
+
+  mapfile -tO ${#usage[@]} usage << EOF
+
+(c) 2019-$(date +%Y) ${authors[*]}
+
+$license License ($license_url)
+EOF
+
+  printf '%s\n' "${usage[@]}" >&2
+}
+
+function main() {
+  if [[ $UID -eq 0 ]]; then
+    log_msg "${Err}${Yel}$prog${RCol} should not be run as root!"
+    exit $C_USAGE_ERR
+  fi
+
+  global_start_time="$(date +%s)"
+
+  if [[ ! -d "$UPDOOT_CACHE_DIR" ]]; then
+    mkdir -p "$UPDOOT_CACHE_DIR"
+  fi
+
+  local -a providers_select=()
+  local -a providers_add=()
+  local -a providers_ignore=()
+
+  local -A providers_opts=()
+
+  local options_done=0
+  shopt -s extglob
+  while [[ $# -gt 0 ]]; do
+    local ignore=0
+    local add=0
+    local orig="$1"
+    local r="$1"
+    shift
+    vlog_msg "${Dbg}parse arg: ${Yel}$r${RCol}"
+    if [[ "$r" =~ ^--[_[:alnum:]] ]]; then
+      vlog_msg "${Dbg}match: ${Pur}"'^--[_[:alnum:]]'"${RCol}"
+      ignore=1
+      r="${r:2}"
+    elif [[ "$r" =~ ^--$ ]]; then
+      vlog_msg "${Dbg}match: ${Pur}"'^--$'"${RCol}"
+      options_done=1
+      continue
+    elif [[ "$r" =~ ^\+\+[_[:alnum:]] ]]; then
+      vlog_msg "${Dbg}match: ${Pur}"'^\+\+[_[:alnum:]]'"${RCol}"
+      add=1
+      r="${r:2}"
+    elif [[ "$r" =~ ^\+[_[:alnum:]] ]]; then
+      vlog_msg "${Dbg}match: ${Pur}"'^\+[_[:alnum:]]'"${RCol}"
+      add=1
+      r="${r:1}"
+    elif [[ "$r" =~ ^-[_[:alnum:]] ]]; then
+      vlog_msg "${Dbg}match: ${Pur}"'^-[_[:alnum:]]'"${RCol}"
+      if [[ $options_done -eq 1 ]]; then
+        ignore=1
+        r="${r:1}"
+      else
+        local opt OPTARG OPTIND
+        OPTIND=1
+        while getopts ":hHVvs" opt "$r"; do
+          case $opt in
+          h)
+            usage
+            return $C_USAGE
+            ;;
+          H)
+            usage -H
+            return $C_USAGE
+            ;;
+          V)
+            echo "$version"
+            return $C_USAGE
+            ;;
+          v)
+            UPDOOT_VERBOSE=1
+            vlog_msg "${Dbg}UPDOOT_VERBOSE=$UPDOOT_VERBOSE"
+            ;;
+          s)
+            UPDOOT_STRICT=1
+            vlog_msg "${Dbg}UPDOOT_STRICT=$UPDOOT_STRICT"
+            ;;
+          *)
+            log_msg "${Err}invalid option: ${Yel}${OPTARG}${RCol} (to disable a provider, use --provider, or disambiguate with -- before using -provider)"
+            usage
+            return $C_USAGE_ERR
+            ;;
+          esac
+        done
+        continue
+      fi
+    else
+      vlog_msg "${Dbg}no match"
+    fi
+    shopt -u extglob
+
+    local pr="${r/:*/}"
+    local pr_opts="${r:${#pr}+1}"
+
+    if [[ -v "PROVIDERS[$pr]" && -n "${PROVIDERS[$pr]}" ]]; then
+      if [[ $ignore -eq 1 ]]; then
+        if [[ -n "$pr_opts" ]]; then
+          log_msg "${Err}options cannot specified with provider negation: ${Yel}${orig}${RCol}"
+          exit $C_USAGE_ERR
+        fi
+        providers_ignore+=("$pr")
+      elif [[ $add -eq 1 ]]; then
+        providers_add+=("$pr")
+        providers_opts["$pr"]="$pr_opts"
+      else
+        providers_select+=("$pr")
+        providers_opts["$pr"]="$pr_opts"
+      fi
+    else
+      log_msg "${Err}Unknown provider: ${Yel}${pr}${RCol}"
+      exit $C_USAGE_ERR
+    fi
+  done
+
+  if [[ ${#providers_select[@]} -eq 0 ]]; then
+    providers_select+=("${UPDOOT_PROVIDERS_ENABLED[@]}")
+  fi
+  if [[ ${#providers_add[@]} -gt 0 ]]; then
+    providers_select+=("${providers_add[@]}")
+  fi
+  update_total=${#providers_select[@]}
+
+  # local i=0
+  while ((update_index < ${#providers_select[@]})); do
+    provider="${providers_select[$update_index]}"
+
+    # for provider in "${providers_select[@]}"; do
+    update_provider="$provider"
+    update_index=$((update_index + 1))
+    local skip=0
+    for ignore in "${providers_ignore[@]}"; do
+      if [[ $provider == "$ignore" ]]; then
+        skip=1
+        break
+      fi
+    done
+
+    if [[ $skip -eq 1 ]]; then
+      log_msg "${Wrn}(${Cya}${update_index}${RCol}/${Cya}${#providers_select[@]}${RCol}) Skipping '${Cya}${provider}${RCol}'${RCol}"
+      update_skip=$((update_skip + 1))
+      continue
+    fi
+
+    local -a opts
+    if [[ -v "providers_opts[$provider]" ]]; then
+      IFS=':' read -ra opts <<< "${providers_opts["$provider"]}"
+    fi
+
+    local func start_time lastupdate lastupdate_elapsed cal updatestr
+    func="${PROVIDERS[$provider]}"
+    start_time="$(date +%s)"
+    lastupdate="$UPDOOT_CACHE_DIR/${provider}"
+    updatestr=""
+    if [[ ! -s $lastupdate ]]; then
+      touch "$lastupdate"
+    else
+      lastupdate_elapsed=$(moment -ti "unix" "$(cat "$lastupdate")")
+      cal=$(moment -ci "unix" "$(cat "$lastupdate")")
+      updatestr=" (last updated ${Pur}$lastupdate_elapsed${RCol} / ${Blu}$cal${RCol} )"
+    fi
+
+    log_msg "${Ifo}(${Cya}${update_index}${RCol}/${Cya}${update_total}${RCol}) ${Cya}$provider${RCol}${updatestr}..."
+
+    mapfile -t cmd << EOF
+      set -euo pipefail
+      IFS=$'\\n\\t'
+      trap 'handle_sig -cx $C_INT INT' INT
+      $(declare -f "${func?}")
+      $(declare -p PROVIDERS_USAGE)
+      $func $(printf '"-%s" ' "${opts[@]}")
+EOF
+    vlog_msg "${Dbg}running cmd:"
+    for l in "${cmd[@]}"; do
+      vlog_msg "\t${Yel}${l}${RCol}"
+    done
+    set +e
+    SHELL="/bin/bash" script -qec "${cmd[*]}" "${UPDOOT_CACHE_DIR}/${provider}_${start_time}.log"
+    code="$?"
+    set -e
+    unset -v cmd
+
+    local statustype=""
+    local statusmsg=""
+    local exit=0
+
+    local end_time elapsed
+    end_time="$(date +%s)"
+    elapsed=$((end_time - start_time))
+
+    case ${code} in
+    0)
+      update_success=$((update_success + 1))
+      statustype="${Ifo}"
+      statusmsg="completed"
+      echo "$end_time" > "$lastupdate"
+      ;;
+    $C_INT)
+      update_fail=$((update_fail + 1))
+      statustype="${Err}"
+      statusmsg="interrupted by user"
+      exit=1
+      ;;
+    $C_USAGE)
+      update_skip=$((update_skip + 1))
+      statustype="${Wrn}"
+      statusmsg="skipped"
+      code=0
+      ;;
+    $C_SKIP | $C_DEP_NOTFOUND | $C_USAGE_ERR)
+      if [[ $UPDOOT_STRICT -eq 1 ]]; then
+        update_fail=$((update_fail + 1))
+        statustype="${Err}"
+        statusmsg="failed"
+        exit=1
+      else
+        update_skip=$((update_skip + 1))
+        statustype="${Wrn}"
+        statusmsg="skipped"
+        code=0
+      fi
+      ;;
+    *)
+      update_fail=$((update_fail + 1))
+      statustype="${Err}"
+      statusmsg="${Red}failed${RCol} (${Red}code ${code}${RCol})"
+      if [[ $UPDOOT_STRICT -eq 1 ]]; then
+        exit=1
+      fi
+      ;;
+    esac
+
+    log_msg "${statustype}${Cya}${provider}${RCol} ${statusmsg} (${Pur}${elapsed} seconds elapsed${RCol})"
+
+    if [[ $exit -eq 1 ]]; then
+      if [[ $update_index -lt $update_total ]]; then
+        case "$(choose "Continue with ${Cya}$((update_total - update_index))${RCol} remaining updates?" "continue" "quit" "Retry")" in
+        c)
+          log_msg "${Ifo}Continuing...${RCol}"
+          ;;
+        q)
+          log_msg "${Ifo}Exiting...${RCol}"
+          exit $code
+          ;;
+        R)
+          log_msg "${Ifo}Retrying...${RCol}"
+          update_index=$((update_index - 1))
+          ;;
+        *)
+          exit $C_UNKNOWN
+          ;;
+        esac
+      else
+        case "$(choose "Retry?" "quit" "Retry")" in
+        q)
+          log_msg "${Ifo}Exiting...${RCol}"
+          exit $code
+          ;;
+        R)
+          log_msg "${Ifo}Retrying...${RCol}"
+          update_index=$((update_index - 1))
+          ;;
+        *)
+          exit $C_UNKNOWN
+          ;;
+        esac
+      fi
+    fi
+
+    log_msg ' ---'
+  done
+
+  exit 0
+}
+
+trap 'handle_exit'     EXIT
+trap 'handle_sig TERM' TERM
+trap 'handle_sig ILL'  ILL
+trap 'handle_sig HUP'  HUP
+trap 'handle_sig INT'  INT
+
+main "$@"
