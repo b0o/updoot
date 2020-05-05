@@ -33,7 +33,7 @@ Options:
 Screencast:
   https://asciinema.org/a/191154
 
-Environment Variable:
+Environment Variables:
   Global:
     $UPDOOT_PROVIDERS_ENABLED (string array)
       The providers to be enabled by default.
@@ -142,7 +142,7 @@ Available Providers: (* indicates provider is enabled by default)
       Required:
         - sudo (arch-repo: sudo) (https://www.sudo.ws)
       Optional:
-        - archlinux-news (https://gist.github.com/5962d8ff8095df55e7a93884d9290f42)
+        - archlinux-news
           Automatically check for unread RSS items from the archlinux.org news feed
           Dependencies:
             - curl (arch-repo: curl) (https://curl.haxx.se)
