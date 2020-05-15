@@ -48,7 +48,7 @@ Environment Variables:
     $UPDOOT_VERBOSE (bool, 0 or 1) [0]
       If true, output additional status information to stderr.
 
-    $UPDOOT_CACHE_DIR (directory) [/home/maddy/.cache/update]
+    $UPDOOT_CACHE_DIR (directory) [$HOME/.cache/update]
       Directory in which to place log/runtime files
 
 Dependencies:
@@ -74,7 +74,7 @@ Available Providers: (* indicates provider is enabled by default)
           Required for path@version packages, as described in UPDOOT_GO_GOPACKAGES_PATH
 
     Environment Variables:
-      $UPDOOT_GO_GOPACKAGES_PATH (directory) [/home/maddy/.gopackages]
+      $UPDOOT_GO_GOPACKAGES_PATH (directory) [$HOME/.gopackages]
         Path to a POSIX shell file containing an array named GO_BIN_PKGS
         Array items consist of a Go package path, optionally followed by an @, optionally followed by a version.
         A package followed by an @ with no version implies the latest version.
