@@ -159,6 +159,7 @@ declare -rxg C_INT=130
 
 # providers registry
 declare -xgA PROVIDERS=()
+declare -xgA PROVIDERS_HIDDEN=()
 declare -xgA PROVIDERS_USAGE=()
 
 # global state
@@ -439,6 +440,23 @@ export -f provider_usage
 
 function register_provider() {
   local func name
+  local -i hidden
+
+  local opt OPTARG OPTIND
+  OPTIND=1
+  while getopts ":h" opt "$@"; do
+    case "$opt" in
+    h)
+      hidden=1
+      ;;
+    \?)
+      log_msg "${Err}register_provider: invalid option ${Yel}${opt}${RCol}"
+      return $C_USAGE_ERR
+      ;;
+    esac
+  done
+  shift $((OPTIND - 1))
+
   case $# in
   0)
     log_msg "${Err}register_provider: expected argument"
@@ -465,14 +483,18 @@ function register_provider() {
 
   PROVIDERS["$name"]="$func"
 
+  if [[ -v hidden && $hidden -eq 1 ]]; then
+    PROVIDERS_HIDDEN["$name"]=1
+  fi
+
   if read -rt 0; then
     PROVIDERS_USAGE["$name"]="$(cat)"
   fi
 
   if [[ "$name" != "$func" ]]; then
-    vlog_msg "${Dbg}Registered provider: ${Cya}${name}${RCol} -> ${Pur}${func}${RCol}"
+    vlog_msg "${Dbg}Registered provider: ${Cya}${name}${RCol} -> ${Pur}${func}${RCol}${hidden:+ (${Yel}hidden${RCol})}"
   else
-    vlog_msg "${Dbg}Registered provider: ${Cya}${name}${RCol}"
+    vlog_msg "${Dbg}Registered provider: ${Cya}${name}${RCol}${hidden:+ (${Yel}hidden${RCol})}"
   fi
 }
 
@@ -482,13 +504,13 @@ function update_dummy() {
   log_msg "${Ifo}dummy"
   return 0
 }
-register_provider update_dummy dummy
+register_provider -h update_dummy dummy
 
 function update_dummy_fail() {
   log_msg "${Ifo}dummy_fail"
   return 1
 }
-register_provider update_dummy_fail dummy_fail
+register_provider -h update_dummy_fail dummy_fail
 
 # --- providers
 
@@ -1226,6 +1248,9 @@ EOF
     usage+=("  none")
   else
     for p in "${!PROVIDERS[@]}"; do
+      if [[ -v "PROVIDERS_HIDDEN[$p]" && ${PROVIDERS_HIDDEN[$p]} -eq 1 ]]; then
+        continue
+      fi
       local s="- $p"
       local e
       for e in "${UPDOOT_PROVIDERS_ENABLED[@]}"; do
