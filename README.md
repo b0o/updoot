@@ -90,8 +90,6 @@ Available Providers: (* indicates provider is enabled by default)
       Required:
         - zsh (arch-repo: zsh) (https://zsh.org)
 
-  - dummy_fail
-
   * gem
     A package manager for the Ruby programming language
     Dependencies:
@@ -124,8 +122,6 @@ Available Providers: (* indicates provider is enabled by default)
     Fast, reliable, and secure dependency management for Node.js
     Dependencies:
       - yarn (arch-repo: yarn) (https://yarnpkg.com)
-
-  - dummy
 
   * asdf
     Extendable version manager with support for Ruby, Node.js, Elixir, Erlang & more
