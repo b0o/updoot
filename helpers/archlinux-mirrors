@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# archlinux-mirrors unifies the maintenance of mirrorlists for both pacman and
-# powerpill
+# archlinux-mirrors unifies the maintenance of mirrorlists for pacman
 #
 # Copyright (c) 2019-2020 Maddison Hellstrom (github.com/b0o)
 #
@@ -29,13 +28,9 @@ declare -g mirrorlist_url="https://www.archlinux.org/mirrorlist/all/"
 declare -g mirrorlist_new="/etc/pacman.d/mirrorlist.pacnew"
 declare -g mirrorlist="/etc/pacman.d/mirrorlist"
 
-declare -g powerpill_conf="/etc/powerpill/powerpill.json"
-
 declare -gi insecure=0
 
 declare -gi pacman_n=10
-declare -gi reflector_fastest_n=10
-declare -gi reflector_latest_n=20
 
 declare -ga tmp_files=()
 
@@ -93,70 +88,25 @@ function update_pacman() {
   rm "$tmp"
 }
 
-function update_powerpill() {
-  command -v powerpill &> /dev/null || {
-    echo "error: powerpill not found in PATH" >&2
-    return 1
-  }
-  command -v reflector &> /dev/null || {
-    echo "error: reflector not found in PATH" >&2
-    return 1
-  }
-  command -v jq &> /dev/null || {
-    echo "error: jq not found in PATH" >&2
-    return 1
-  }
-
-  local servers
-  # shellcheck disable=2016
-  servers="$(
-    reflector --verbose -p rsync -f $reflector_fastest_n -l $reflector_latest_n -c "$country" \
-      | awk '
-        BEGIN {
-          out="["
-        }
-        /Server = /{
-          if (out != "[") {
-            out = out ", "
-          }
-          out = out "\"" $3 "\""
-        }
-        END {
-          print out "]"
-        }
-      '
-  )"
-  tmp_files+=("${powerpill_conf}.new")
-  jq --argjson "servers" "$servers" '.rsync.servers = $servers' "$powerpill_conf" > "${powerpill_conf}.new"
-  mv "${powerpill_conf}.new" "$powerpill_conf"
-  return 0
-}
-
 function main() {
   local country="United States"
   local -i force=0
   local -i update_specified=0
   local -i update_pacman=1
-  local -i update_powerpill=0
   while [[ $# -gt 0 ]]; do
     if [[ $1 =~ ^- ]]; then
       case "$1" in
-      -a | --all | --pacman | --powerpill)
+      -a | --all | --pacman)
         if [[ $update_specified -eq 0 ]]; then
           update_specified=1
           update_pacman=0
-          update_powerpill=0
         fi
         ;;& # continue matching
       -a | --all)
         update_pacman=1
-        update_powerpill=1
         ;;
       --pacman)
         update_pacman=1
-        ;;
-      --powerpill)
-        update_powerpill=1
         ;;
       -c | --country)
         if [[ $# -lt 2 ]]; then
@@ -203,11 +153,6 @@ function main() {
   if [[ $update_pacman -eq 1 ]]; then
     echo "updating mirrors (pacman) ($country)" >&2
     update_pacman "$@"
-  fi
-
-  if [[ $update_powerpill -eq 1 ]]; then
-    echo "updating mirrors (powerpill) ($country)" >&2
-    update_powerpill "$@"
   fi
 
   echo "$prog finished" >&2

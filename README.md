@@ -143,10 +143,8 @@ Available Providers: (* indicates provider is enabled by default)
           Dependencies:
             - curl (arch-repo: curl) (https://curl.haxx.se)
             - xmlstarlet (arch-repo: xmlstarlet) (https://xmlstar.sourceforge.net)
-        - powerpill (aur: powerpill) (https://xyne.archlinux.ca/projects/powerpill)
-          Pacman wrapper for faster downloads.
         - reflector (arch-repo: reflector) (https://xyne.archlinux.ca/projects/reflector)
-          Finds the fastest mirrors and updates mirrorlist for pacman and powerpill.
+          Finds the fastest mirrors and updates mirrorlist for pacman.
         - pacdiff (arch-repo: pacman-contrib) (https://git.archlinux.org/pacman-contrib.git/about)
           A simple program to merge or remove pacnew/pacsave files.
 
@@ -168,7 +166,6 @@ Available Providers: (* indicates provider is enabled by default)
       :P   pacman
       :M   archlinux-mirrors
       :D   pacdiff
-      :L   powerpill
 
     Environment Variables:
       $UPDOOT_ARCHLINUX_MIRROR_COUNTRY (country name) [United States]

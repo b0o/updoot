@@ -522,12 +522,11 @@ function update_archlinux() {
   local -i task_news=1
   local -i task_yay=1
   local -i task_pacman=1
-  local -i task_powerpill=1
   local -i task_mirrorlist=1
   local -i task_pacdiff=1
   local opt OPTARG OPTIND
   OPTIND=1
-  while getopts ":hanypmdNYPMDL" opt "$@"; do
+  while getopts ":hanypmdNYPMD" opt "$@"; do
     case "$opt" in
     h)
       provider_usage
@@ -537,7 +536,6 @@ function update_archlinux() {
       task_news=1
       task_yay=1
       task_pacman=1
-      task_powerpill=1
       task_mirrorlist=1
       task_pacdiff=1
       ;;
@@ -581,9 +579,6 @@ function update_archlinux() {
     D)
       task_pacdiff=0
       ;;
-    L)
-      task_powerpill=0
-      ;;
     \?)
       log_msg "${Err}${Cya}archlinux${RCol}: invalid option: ${Yel}${OPTARG}${RCol}"
       return $C_USAGE_ERR
@@ -620,11 +615,7 @@ function update_archlinux() {
 
   if ((task_yay || task_pacman)); then
     if ((task_yay)) && cmd_exists yay; then
-      if ((task_powerpill)) && cmd_exists powerpill; then
-        run_cmd yay --pacman=powerpill -Syyu
-      else
-        run_cmd yay -Syyu
-      fi
+      run_cmd yay -Syyu
     elif ((task_pacman)) && cmd_exists pacman; then
       run_cmd sudo pacman -Syu
     else
@@ -633,11 +624,7 @@ function update_archlinux() {
   fi
 
   if ((task_mirrorlist)) && cmd_exists archlinux-mirrors; then
-    if ((task_powerpill)) && cmd_exists powerpill &> /dev/null; then
-      run_cmd sudo archlinux-mirrors --powerpill --pacman --country "$UPDOOT_ARCHLINUX_MIRROR_COUNTRY"
-    else
-      run_cmd sudo archlinux-mirrors --pacman --country "$UPDOOT_ARCHLINUX_MIRROR_COUNTRY"
-    fi
+    run_cmd sudo archlinux-mirrors --pacman --country "$UPDOOT_ARCHLINUX_MIRROR_COUNTRY"
   fi
 
   if ((task_pacdiff)) && cmd_exists pacdiff; then
@@ -665,10 +652,8 @@ Dependencies:
       Dependencies:
         - curl (arch-repo: curl) (https://curl.haxx.se)
         - xmlstarlet (arch-repo: xmlstarlet) (https://xmlstar.sourceforge.net)
-    - powerpill (aur: powerpill) (https://xyne.archlinux.ca/projects/powerpill)
-      Pacman wrapper for faster downloads.
     - reflector (arch-repo: reflector) (https://xyne.archlinux.ca/projects/reflector)
-      Finds the fastest mirrors and updates mirrorlist for pacman and powerpill.
+      Finds the fastest mirrors and updates mirrorlist for pacman.
     - pacdiff (arch-repo: pacman-contrib) (https://git.archlinux.org/pacman-contrib.git/about)
       A simple program to merge or remove pacnew/pacsave files.
 
@@ -690,7 +675,6 @@ Options:
   :P   pacman
   :M   archlinux-mirrors
   :D   pacdiff
-  :L   powerpill
 
 Environment Variables:
   \$UPDOOT_ARCHLINUX_MIRROR_COUNTRY (country name) [$UPDOOT_ARCHLINUX_MIRROR_COUNTRY]
