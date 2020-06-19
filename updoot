@@ -133,6 +133,7 @@ if [[ ! -v UPDOOT_PROVIDERS_ENABLED ]]; then
   # TODO: auto-detect supported providers
   declare -xga UPDOOT_PROVIDERS_ENABLED=(
     "archlinux"
+    "nix"
     "asdf"
     "cabal"
     "rust"
@@ -683,6 +684,45 @@ Environment Variables:
 
 EOF
 
+function update_nix() {
+  local opt OPTARG OPTIND
+  OPTIND=1
+  while getopts ":h" opt "$@"; do
+    case "$opt" in
+    h)
+      provider_usage
+      return $C_USAGE
+      ;;
+    *)
+      log_msg "${Err}${Cya}archlinux${RCol}: invalid option: ${Yel}${opt}${RCol}"
+      return $C_USAGE_ERR
+      ;;
+    esac
+  done
+
+  if cmd_exists nix; then
+    local sudo=
+    [[ -O /nix/var/nix/gcroots ]] || sudo=sudo
+    run_cmd $sudo nix-channel --update
+    run_cmd $sudo nix-env -iA nixpkgs.nix
+    run_cmd $sudo nix-env -u '*'
+    if cmd_exists home-manager; then
+      home-manager switch
+    fi
+  else
+    return $C_DEP_NOTFOUND
+  fi
+}
+register_provider update_nix nix << EOF
+A purely functional package manager
+Dependencies:
+  Required:
+    - nix (aur: nix) (https://nixos.org/nix)
+    - sudo [if root is needed to manage nix] (arch-repo: sudo) (https://www.sudo.ws)
+  Optional:
+    - home-manager (https://github.com/rycee/home-manager)
+EOF
+
 function update_asdf() {
   if cmd_exists asdf; then
     run_cmd asdf update
@@ -712,15 +752,15 @@ EOF
 
 function update_rust() {
   local n=0
-  if cmd_exists cargo; then
-    n=$((n + 1))
-    run_cmd cargo install-update -a
-  fi
   if cmd_exists rustup; then
     n=$((n + 1))
     run_cmd rustup self upgrade-data
     # run_cmd rustup self update
     run_cmd rustup update
+  fi
+  if cmd_exists cargo; then
+    n=$((n + 1))
+    run_cmd cargo install-update -a
   fi
   [[ $n -gt 0 ]] || return $C_DEP_NOTFOUND
 }
