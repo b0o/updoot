@@ -2,6 +2,8 @@
 
 # archlinux-mirrors unifies the maintenance of mirrorlists for pacman
 #
+# NOTE(b0o): after removing support for powerpill, this helper is not super useful anymore
+#
 # Copyright (c) 2019-2020 Maddison Hellstrom (github.com/b0o)
 #
 # This program is free software: you can redistribute it and/or modify
