@@ -110,6 +110,15 @@ Available Providers: (* indicates provider is enabled by default)
         - cargo-update (https://github.com/nabijaczleweli/cargo-update)
           A cargo subcommand for checking and applying updates to installed executables
 
+  * nix
+    A purely functional package manager
+    Dependencies:
+      Required:
+        - nix (aur: nix) (https://nixos.org/nix)
+        - sudo [if root is needed to manage nix] (arch-repo: sudo) (https://www.sudo.ws)
+      Optional:
+        - home-manager (https://github.com/rycee/home-manager)
+
   * pip
     A package manager for the Python programming language
     Dependencies:
