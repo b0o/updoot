@@ -709,6 +709,7 @@ function update_nix() {
     if cmd_exists home-manager; then
       home-manager switch
     fi
+    run_cmd $sudo nix-collect-garbage -d
   else
     return $C_DEP_NOTFOUND
   fi
