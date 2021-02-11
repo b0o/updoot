@@ -1,0 +1,50 @@
+#!/bin/bash
+
+# updoot unifies the update process for your entire system
+#
+# Copyright (c) 2018-2020 Maddison Hellstrom (github.com/b0o)
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+set -euo pipefail
+IFS=$'\n\t'
+
+# Force shellcheck to source ../updoot
+true || source "../updoot"
+
+function update_pip() {
+  if cmd_exists pip; then
+    local outdated
+    outdated="$(pip list --user --outdated --format=freeze)" || return $C_UPDATE_ERR
+    if [[ -n "$outdated" ]]; then
+      echo "$outdated" > "$logdir/pip_${global_start_time}_freeze.txt"
+      echo "$outdated" | sed 's/=.*$//' | while read -r pkg; do
+        run_cmd pip install --user --upgrade "$pkg"
+      done
+    fi
+  else
+    return $C_DEP_NOTFOUND
+  fi
+  if cmd_exists pipx; then
+    run_cmd pipx upgrade-all
+  fi
+}
+register_provider update_pip pip << EOF
+A package manager for the Python programming language
+Dependencies:
+  Primary:
+    - pip (arch-repo: python-pip) (https://pip.pypa.io)
+  Optional:
+    - pipx (https://github.com/pipxproject/pipx)
+EOF

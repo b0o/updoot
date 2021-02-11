@@ -1,0 +1,149 @@
+#!/bin/bash
+
+# updoot unifies the update process for your entire system
+#
+# Copyright (c) 2018-2020 Maddison Hellstrom (github.com/b0o)
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+set -euo pipefail
+IFS=$'\n\t'
+
+# Force shellcheck to source ../updoot
+true || source "../updoot"
+
+function update_nvim() {
+  local -i tasklist_modified=0
+  local -i task_clean=0
+  local -i task_update=1
+  local -i task_install=0
+  local opt OPTARG OPTIND
+  OPTIND=1
+  while getopts ":hacuiCUI" opt "$@"; do
+    case "$opt" in
+    h)
+      provider_usage
+      return $C_USAGE
+      ;;
+    a)
+      task_clean=1
+      task_update=1
+      task_install=1
+      ;;
+    C | u | I)
+      if [[ $tasklist_modified -eq 0 ]]; then
+        tasklist_modified=1
+        task_clean=0
+        task_update=0
+      fi
+      ;;& # continue matching
+    c)
+      task_clean=1
+      ;;
+    C)
+      task_clean=1
+      ;;
+    u)
+      task_update=1
+      ;;
+    U)
+      task_update=0
+      ;;
+    i)
+      task_install=1
+      ;;
+    I)
+      task_install=1
+      ;;
+    \?)
+      log_msg "${Err}${Cya}nvim${RCol}: invalid option: ${Yel}${OPTARG}${RCol}"
+      return $C_USAGE_ERR
+      ;;
+    esac
+  done
+
+  local -a upd_cmd=()
+  if ((task_clean)); then
+    mapfile -tO ${#upd_cmd[@]} upd_cmd << EOF
+if (exists("*PluginCleanHeadless"))
+  echom "Cleaning Plugins..."
+  call PluginCleanHeadless()
+else
+  echo "Function not found: PluginCleanHeadless()\n"
+  cquit!
+endif
+EOF
+  fi
+  if ((task_update)); then
+    mapfile -tO ${#upd_cmd[@]} upd_cmd << EOF
+if (exists("*PluginUpdateHeadless"))
+  echom "Updating Plugins..."
+  call PluginUpdateHeadless()
+else
+  echo "Function not found: PluginUpdateHeadless()\n"
+  cquit!
+endif
+EOF
+  fi
+  if ((task_install)); then
+    mapfile -tO ${#upd_cmd[@]} upd_cmd << EOF
+if (exists("*PluginInstallHeadless"))
+  echom "Installing Plugins..."
+  call PluginInstallHeadless()
+else
+  echo "Function not found: PluginInstallHeadless()\n"
+  cquit!
+endif
+EOF
+  fi
+  if [[ ${#upd_cmd[@]} -eq 0 ]]; then
+    log_msg "${Wrn}nothing to do"
+  fi
+  mapfile -tO ${#upd_cmd[@]} upd_cmd << EOF
+quit!
+EOF
+  if cmd_exists nvim; then
+    run_cmd nvim --headless -c "${upd_cmd[*]}"
+  else
+    return $C_DEP_NOTFOUND
+  fi
+}
+register_provider update_nvim nvim << EOF
+The Neovim text editor
+Dependencies:
+  - nvim (arch-repo: neovim) (https://neovim.io)
+
+Note:
+  Expects your neovim configuration to define the following functions:
+    - PluginCleanHeadless()
+    - PluginUpdateHeadless()
+    - PluginInstallHeadless()
+
+Options:
+  General:
+  :h   display usage information
+  :a   enable all tasks
+
+  Enable tasks inclusively:
+  :c   clean
+  :i   install
+
+  Enable tasks exclusively:
+  :C   clean
+  :u   update
+  :I   install
+
+  Exclude tasks:
+  :U   update
+EOF

@@ -48,8 +48,8 @@ Environment Variables:
     $UPDOOT_VERBOSE (bool, 0 or 1) [0]
       If true, output additional status information to stderr.
 
-    $UPDOOT_CACHE_DIR (directory) [$HOME/.cache/update]
-      Directory in which to place log/runtime files
+    $UPDOOT_CACHE_DIR (directory) [$HOME/.cache/updoot]
+      Directory to use for log/runtime/temp files.
 
 Dependencies:
   Global:
@@ -58,84 +58,10 @@ Dependencies:
      - git (https://git-scm.com)
 
 Available Providers: (* indicates provider is enabled by default)
-  * npm
-    A package manager for Node.js / JavaScript
-    Dependencies:
-      - npm (arch-repo: npm) (https://npmjs.com)
-
-  * go
-    A package manager for the Go programming language
-    Dependencies:
-      Primary:
-        - go (arch-repo: go) (https://golang.org/)
-      Optional:
-        - gobin (https://github.com/myitcv/gobin)
-          The gobin command installs/runs main packages
-          Required for path@version packages, as described in UPDOOT_GO_GOPACKAGES_PATH
-
-    Environment Variables:
-      $UPDOOT_GO_GOPACKAGES_PATH (directory) [$HOME/.gopackages]
-        Path to a POSIX shell file containing an array named GO_BIN_PKGS
-        Array items consist of a Go package path, optionally followed by an @, optionally followed by a version.
-        A package followed by an @ with no version implies the latest version.
-        A package not followed by an @ will be fetched with go get rather than gobin
-
-  * zsh
-    A very advanced and programmable command interpreter (shell) for UNIX
-    Dependencies:
-      Primary: (at least one)
-        - oh-my-zsh (https://github.com/ohmyzsh/ohmyzsh)
-        and/or
-        - zinit (https://github.com/zdharma/zinit)
-      Required:
-        - zsh (arch-repo: zsh) (https://zsh.org)
-
-  * gem
-    A package manager for the Ruby programming language
-    Dependencies:
-      - gem (arch-repo: rubygems) (https://rubygems.org/)
-
-  * rust
-    A multi-paradigm system programming language
-    Dependencies:
-      Primary: (at least one)
-        - rustup (arch-repo: rustup) (https://rustup.rs/) (recommended)
-          Rust toolchain installer
-          Includes: cargo, rustup
-        or
-        - rust (arch-repo: rust) (https://www.rust-lang.org/)
-          Rust toolchain
-          Includes: cargo
-      cargo crates:
-        - cargo-update (https://github.com/nabijaczleweli/cargo-update)
-          A cargo subcommand for checking and applying updates to installed executables
-
-  * nix
-    A purely functional package manager
-    Dependencies:
-      Required:
-        - nix (aur: nix) (https://nixos.org/nix)
-        - sudo [if root is needed to manage nix] (arch-repo: sudo) (https://www.sudo.ws)
-      Optional:
-        - home-manager (https://github.com/rycee/home-manager)
-
-  * pip
-    A package manager for the Python programming language
-    Dependencies:
-      Primary:
-        - pip (arch-repo: python-pip) (https://pip.pypa.io)
-      Optional:
-        - pipx (https://github.com/pipxproject/pipx)
-
   * yarn
     Fast, reliable, and secure dependency management for Node.js
     Dependencies:
       - yarn (arch-repo: yarn) (https://yarnpkg.com)
-
-  * asdf
-    Extendable version manager with support for Ruby, Node.js, Elixir, Erlang & more
-    Dependencies:
-      - asdf (aur: asdf-vm) (https://github.com/asdf-vm/asdf)
 
   * archlinux
     Updates Arch Linux & performs routine maintenence like updating mirrorlist & managing .pac{new,save} files
@@ -186,16 +112,6 @@ Available Providers: (* indicates provider is enabled by default)
     Dependencies:
       - cabal-install (arch-repo: cabal-install) (https://github.com/haskell/cabal/blob/master/cabal-install/README.md)
 
-  - cpan
-    A repository of software modules written in the Perl programming language
-    Dependencies:
-      - cpan (arch-repo: perl) (https://www.perl.org)
-
-  * opam
-    A package manager for the OCaml programming language
-    Dependencies:
-      - opam (arch-repo: opam) (https://opam.ocaml.org/)
-
   * nvim
     The Neovim text editor
     Dependencies:
@@ -224,8 +140,112 @@ Available Providers: (* indicates provider is enabled by default)
       Exclude tasks:
       :U   update
 
+  * pip
+    A package manager for the Python programming language
+    Dependencies:
+      Primary:
+        - pip (arch-repo: python-pip) (https://pip.pypa.io)
+      Optional:
+        - pipx (https://github.com/pipxproject/pipx)
 
-(c) 2019-2020 Maddison Hellstrom <https://github.com/b0o>
+  - dummy_user
+
+  * nix
+    A purely functional package manager
+    Dependencies:
+      Required:
+        - nix (aur: nix) (https://nixos.org/nix)
+        - sudo [if root is needed to manage nix] (arch-repo: sudo) (https://www.sudo.ws)
+      Optional:
+        - home-manager (https://github.com/rycee/home-manager)
+
+  * asdf
+    Extendable version manager with support for Ruby, Node.js, Elixir, Erlang & more
+    Dependencies:
+      - asdf (aur: asdf-vm) (https://github.com/asdf-vm/asdf)
+
+  * gem
+    A package manager for the Ruby programming language
+    Dependencies:
+      - gem (arch-repo: rubygems) (https://rubygems.org/)
+
+  - cpan
+    A repository of software modules written in the Perl programming language
+    Dependencies:
+      - cpan (arch-repo: perl) (https://www.perl.org)
+
+  * opam
+    A package manager for the OCaml programming language
+    Dependencies:
+      - opam (arch-repo: opam) (https://opam.ocaml.org/)
+
+  * npm
+    A package manager for Node.js / JavaScript
+    Dependencies:
+      - npm (arch-repo: npm) (https://npmjs.com)
+
+  * zsh
+    A very advanced and programmable command interpreter (shell) for UNIX
+    Dependencies:
+      Primary: (at least one)
+        - oh-my-zsh (https://github.com/ohmyzsh/ohmyzsh)
+        and/or
+        - zinit (https://github.com/zdharma/zinit)
+      Required:
+        - zsh (arch-repo: zsh) (https://zsh.org)
+
+  * go
+    A package manager for the Go programming language
+    Dependencies:
+      Primary:
+        - go (arch-repo: go) (https://golang.org/)
+      Optional:
+        - gobin (https://github.com/myitcv/gobin)
+          The gobin command installs/runs main packages
+          Required for path@version packages, as described in UPDOOT_GO_GOPACKAGES_PATH
+
+    Environment Variables:
+      $UPDOOT_GO_GOPACKAGES_PATH (directory) [$HOME/.gopackages]
+        Path to a Bash script file exporting the following variables:
+
+        - GO_BIN_PKGS (array) [required]
+          Array items consist of a Go package path, optionally followed by an @, optionally followed by a version.
+          A package followed by an @ with no version implies the latest version.
+          A package not followed by an @ will be fetched with go get rather than gobin
+
+        - GOBIN (path) [optional]
+          See https://golang.org/cmd/go/#hdr-Environment_variables
+          If unset,
+
+        - GO_UPDATE_BEHAVIOR (string) [default: replace]
+          One of the following values:
+
+          - purge: All executables in GOBIN will be removed and new executables
+                   will be moved in. This has the effect of only keeping
+                   executables from packages that appear in GO_BIN_PKGS after an
+                   update, so any executables from manually installed packages or
+                   packages that are removed from the GO_BIN_PKGS array will be
+                   removed.
+
+          - replace: New executables will replace old ones in GOBIN
+
+  * rust
+    A multi-paradigm system programming language
+    Dependencies:
+      Primary: (at least one)
+        - rustup (arch-repo: rustup) (https://rustup.rs/) (recommended)
+          Rust toolchain installer
+          Includes: cargo, rustup
+        or
+        - rust (arch-repo: rust) (https://www.rust-lang.org/)
+          Rust toolchain
+          Includes: cargo
+      cargo crates:
+        - cargo-update (https://github.com/nabijaczleweli/cargo-update)
+          A cargo subcommand for checking and applying updates to installed executables
+
+
+(c) 2019-2021 Maddison Hellstrom <https://github.com/b0o>
 
 GPL-3.0-or-later License (https://www.gnu.org/licenses/gpl-3.0.txt)
 ```

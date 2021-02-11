@@ -1,0 +1,85 @@
+#!/bin/bash
+
+# updoot unifies the update process for your entire system
+#
+# Copyright (c) 2018-2020 Maddison Hellstrom (github.com/b0o)
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+set -euo pipefail
+IFS=$'\n\t'
+
+# Force shellcheck to source ../updoot
+true || source "../updoot"
+
+function update_zsh() {
+  if ! cmd_exists zsh; then
+    return $C_DEP_NOTFOUND
+  fi
+
+  local module=0
+  local opt OPTARG OPTIND
+  OPTIND=1
+  while getopts ":ham" opt "$@"; do
+    case "$opt" in
+    h)
+      provider_usage zsh
+      return $C_USAGE
+      ;;
+    a)
+      module=1
+      ;;
+    m)
+      module=1
+      ;;
+    \?)
+      log_msg "${Err}${Cya}zsh${RCol}: invalid option: ${Yel}${OPTARG}${RCol}"
+      return $C_USAGE_ERR
+      ;;
+    esac
+  done
+
+  local -a upd_cmd
+  mapfile -t upd_cmd << EOF
+    $(declare -f log_msg)
+    $(declare -f vlog_msg)
+    $(declare -f cmd_exists)
+    $(declare -f run_cmd)
+    local n=0
+    if cmd_exists upgrade_oh_my_zsh; then
+      n=\$((n + 1))
+      run_cmd upgrade_oh_my_zsh
+    fi
+    if cmd_exists zinit; then
+      n=\$((n + 1))
+      run_cmd zinit self-update
+      if [[ $module -eq 1 ]]; then
+        run_cmd zinit module build
+      fi
+      run_cmd zinit update --all # --parallel 16
+    fi
+    [[ \$n -gt 0 ]] || return $C_DEP_NOTFOUND
+EOF
+  run_cmd zsh -ic "${upd_cmd[*]}"
+}
+register_provider update_zsh zsh << EOF
+A very advanced and programmable command interpreter (shell) for UNIX
+Dependencies:
+  Primary: (at least one)
+    - oh-my-zsh (https://github.com/ohmyzsh/ohmyzsh)
+    and/or
+    - zinit (https://github.com/zdharma/zinit)
+  Required:
+    - zsh (arch-repo: zsh) (https://zsh.org)
+EOF

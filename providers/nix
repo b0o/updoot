@@ -1,0 +1,64 @@
+#!/bin/bash
+
+# updoot unifies the update process for your entire system
+#
+# Copyright (c) 2018-2020 Maddison Hellstrom (github.com/b0o)
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+set -euo pipefail
+IFS=$'\n\t'
+
+# Force shellcheck to source ../updoot
+true || source "../updoot"
+
+function update_nix() {
+  local opt OPTARG OPTIND
+  OPTIND=1
+  while getopts ":h" opt "$@"; do
+    case "$opt" in
+    h)
+      provider_usage
+      return $C_USAGE
+      ;;
+    *)
+      log_msg "${Err}${Cya}archlinux${RCol}: invalid option: ${Yel}${opt}${RCol}"
+      return $C_USAGE_ERR
+      ;;
+    esac
+  done
+
+  if cmd_exists nix; then
+    local sudo=
+    [[ -O /nix/var/nix/gcroots ]] || sudo=sudo
+    run_cmd $sudo nix-channel --update
+    run_cmd $sudo nix-env -iA nixpkgs.nix
+    run_cmd $sudo nix-env -u '*'
+    if cmd_exists home-manager; then
+      home-manager switch
+    fi
+    run_cmd $sudo nix-collect-garbage -d
+  else
+    return $C_DEP_NOTFOUND
+  fi
+}
+register_provider update_nix nix << EOF
+A purely functional package manager
+Dependencies:
+  Required:
+    - nix (aur: nix) (https://nixos.org/nix)
+    - sudo [if root is needed to manage nix] (arch-repo: sudo) (https://www.sudo.ws)
+  Optional:
+    - home-manager (https://github.com/rycee/home-manager)
+EOF
