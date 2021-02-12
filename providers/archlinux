@@ -40,6 +40,7 @@ function update_archlinux() {
   while getopts ":hanypmdNYPMD" opt "$@"; do
     case "$opt" in
     h)
+      # shellcheck disable=2119
       provider_usage
       return $C_USAGE
       ;;
