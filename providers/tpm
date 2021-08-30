@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# updoot unifies the update process for your entire system
+#
+# Copyright (c) 2018-2020 Maddison Hellstrom (github.com/b0o)
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+set -euo pipefail
+IFS=$'\n\t'
+
+# Force shellcheck to source ../updoot
+true || source "../updoot"
+
+declare -xg UPDOOT_TPM_PATH="${UPDOOT_TPM_PATH:-}"
+if [[ -z "$UPDOOT_TPM_PATH" ]]; then
+  UPDOOT_TPM_PATH="$HOME/.tmux/plugins/tpm"
+  if [[ ! -e "$UPDOOT_TPM_PATH" ]]; then
+    UPDOOT_TPM_PATH="${XDG_CONFIG_HOME:-$HOME/.config}/tmux/plugins/tpm"
+    if [[ ! -e "$UPDOOT_TPM_PATH" ]]; then
+      UPDOOT_TPM_PATH=""
+    fi
+  fi
+fi
+
+function update_tpm() {
+  local tpm="$UPDOOT_TPM_PATH/bin/update_plugins"
+  if cmd_exists "$tpm"; then
+    run_cmd "$tpm" all
+  else
+    return $C_DEP_NOTFOUND
+  fi
+}
+register_provider update_tpm tpm << EOF
+Tmux Plugin Manager
+Dependencies:
+  - tmux (arch-repo: tmux) (https://github.com/tmux/tmux)
+  - tpm (https://github.com/tmux-plugins/tpm)
+
+Environment Variables:
+  \$UPDOOT_TPM_PATH [${UPDOOT_TPM_PATH:-not found}]
+  Path to the tpm plugin's directory
+EOF
