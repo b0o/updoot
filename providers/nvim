@@ -73,10 +73,14 @@ function update_nvim() {
       ;;
     esac
   done
-
   local -a upd_cmd=()
-  if ((task_clean)); then
-    mapfile -tO ${#upd_cmd[@]} upd_cmd << EOF
+
+  if [[ -v UPDOOT_PROVIDERS_NVIM_OPTS ]]; then
+    upd_cmd=("${UPDOOT_PROVIDERS_NVIM_OPTS[@]}")
+  else
+    local -a script=()
+    if ((task_clean)); then
+      mapfile -tO ${#script[@]} script << EOF
 if (exists("*PluginCleanHeadless"))
   echom "Cleaning Plugins..."
   call PluginCleanHeadless()
@@ -85,9 +89,9 @@ else
   cquit!
 endif
 EOF
-  fi
-  if ((task_update)); then
-    mapfile -tO ${#upd_cmd[@]} upd_cmd << EOF
+    fi
+    if ((task_update)); then
+      mapfile -tO ${#script[@]} script << EOF
 if (exists("*PluginUpdateHeadless"))
   echom "Updating Plugins..."
   call PluginUpdateHeadless()
@@ -96,9 +100,9 @@ else
   cquit!
 endif
 EOF
-  fi
-  if ((task_install)); then
-    mapfile -tO ${#upd_cmd[@]} upd_cmd << EOF
+    fi
+    if ((task_install)); then
+      mapfile -tO ${#script[@]} script << EOF
 if (exists("*PluginInstallHeadless"))
   echom "Installing Plugins..."
   call PluginInstallHeadless()
@@ -107,20 +111,24 @@ else
   cquit!
 endif
 EOF
-  fi
-  if [[ ${#upd_cmd[@]} -eq 0 ]]; then
-    log_msg "${Wrn}nothing to do"
-  fi
-  mapfile -tO ${#upd_cmd[@]} upd_cmd << EOF
+    fi
+    if [[ ${#script[@]} -eq 0 ]]; then
+      log_msg "${Wrn}nothing to do"
+    fi
+    mapfile -tO ${#script[@]} script << EOF
 quit!
 EOF
+    upd_cmd=(--headless --cmd 'let g:init_deferred_immediate = 1' -c "${script[*]}")
+  fi
   if cmd_exists nvim; then
-    run_cmd nvim --headless -c "${upd_cmd[*]}"
+    run_cmd nvim "${upd_cmd[@]}"
   else
     return $C_DEP_NOTFOUND
   fi
 }
-register_provider update_nvim nvim << EOF
+register_provider \
+  -v UPDOOT_PROVIDERS_NVIM_OPTS \
+  update_nvim nvim << EOF
 The Neovim text editor
 Dependencies:
   - nvim (arch-repo: neovim) (https://neovim.io)
