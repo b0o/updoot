@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 n="${1:-1}"
 output="$(
   curl -Ls "https://www.archlinux.org/feeds/news/" \

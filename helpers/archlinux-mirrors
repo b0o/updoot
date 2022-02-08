@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # archlinux-mirrors unifies the maintenance of mirrorlists for pacman
 #
