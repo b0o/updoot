@@ -24,20 +24,35 @@ IFS=$'\n\t'
 true || source "../updoot"
 
 declare -xg UPDOOT_TPM_PATH="${UPDOOT_TPM_PATH:-}"
+
 if [[ -z "$UPDOOT_TPM_PATH" ]]; then
-  UPDOOT_TPM_PATH="$HOME/.tmux/plugins/tpm"
+  UPDOOT_TPM_PATH="${TMUX_PLUGIN_MANAGER_PATH:+$TMUX_PLUGIN_MANAGER_PATH/tpm}"
   if [[ ! -e "$UPDOOT_TPM_PATH" ]]; then
-    UPDOOT_TPM_PATH="${XDG_CONFIG_HOME:-$HOME/.config}/tmux/plugins/tpm"
+    UPDOOT_TPM_PATH="$HOME/.tmux/plugins/tpm"
     if [[ ! -e "$UPDOOT_TPM_PATH" ]]; then
-      UPDOOT_TPM_PATH=""
+      UPDOOT_TPM_PATH="${XDG_CONFIG_HOME:-$HOME/.config}/tmux/plugins/tpm"
     fi
   fi
 fi
 
 function update_tpm() {
-  local tpm="$UPDOOT_TPM_PATH/bin/update_plugins"
-  if cmd_exists "$tpm"; then
-    run_cmd "$tpm" all
+  local clean install update
+  clean="$(realpath -m "$UPDOOT_TPM_PATH/bin/clean_plugins")"
+  install="$(realpath -m "$UPDOOT_TPM_PATH/bin/install_plugins")"
+  update="$(realpath -m "$UPDOOT_TPM_PATH/bin/update_plugins")"
+
+  if cmd_exists "$clean"; then
+    run_cmd "$clean"
+  else
+    return $C_DEP_NOTFOUND
+  fi
+  if cmd_exists "$update"; then
+    run_cmd "$update" all
+  else
+    return $C_DEP_NOTFOUND
+  fi
+  if cmd_exists "$install"; then
+    run_cmd "$install" all
   else
     return $C_DEP_NOTFOUND
   fi
@@ -51,4 +66,5 @@ Dependencies:
 Environment Variables:
   \$UPDOOT_TPM_PATH [${UPDOOT_TPM_PATH:-not found}]
   Path to the tpm plugin's directory
+  If not set, the tpm provider will try to find your tpm directory.
 EOF
