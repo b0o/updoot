@@ -29,11 +29,11 @@ base="$(realpath "${BASH_SOURCE[0]}")"
 basedir="$(dirname "$base")"
 basename="$(basename "$base")"
 
-declare -xg        prog="updoot"
-declare -xg     version="v0.0.1"
-declare -xg     authors=("Maddison Hellstrom <https://github.com/b0o>")
-declare -xg  repository="https://github.com/b0o/updoot"
-declare -xg     license="GPL-3.0-or-later"
+declare -xg prog="updoot"
+declare -xg version="v0.0.1"
+declare -xg authors=("Maddison Hellstrom <https://github.com/b0o>")
+declare -xg repository="https://github.com/b0o/updoot"
+declare -xg license="GPL-3.0-or-later"
 declare -xg license_url="https://www.gnu.org/licenses/gpl-3.0.txt"
 
 # colors
@@ -137,6 +137,7 @@ declare -rxg C_INT=130
 declare -xgA PROVIDERS=()
 declare -xgA PROVIDERS_HIDDEN=()
 declare -xgA PROVIDERS_USAGE=()
+declare -xgA PROVIDERS_VARS=()
 
 # Global state
 declare -xg update_provider
@@ -148,6 +149,7 @@ declare -xgi update_fail=0
 declare -xgi initialized=0
 declare -xgi locked=0
 declare -xgi dirty=0
+
 # --- utils
 
 function log_msg() {
@@ -330,7 +332,16 @@ function load_configs() {
       }
       vlog_msg "${Dbg}Loaded config '${Cya}$config${RCol}'"
     fi
+  done
 
+  for libdir in "${libdirs[@]}"; do
+    # Add helpers directory to PATH
+    if [[ -d "$libdir/helpers" ]]; then
+      declare -gx PATH="$libdir/helpers:$PATH"
+    fi
+  done
+
+  for libdir in "${libdirs[@]}"; do
     if [[ -d "$libdir/providers" ]]; then
       while read -r provider; do
         [[ -n "$provider" ]] || continue
@@ -341,11 +352,6 @@ function load_configs() {
         }
         vlog_msg "${Dbg}Loaded provider '${Cya}$provider${RCol}'"
       done <<< "$(find "$libdir/providers" -mindepth 1 -maxdepth 1 -type f | sort)"
-    fi
-
-    # Add helpers directory to PATH
-    if [[ -d "$libdir/helpers" ]]; then
-      declare -gx PATH="$libdir/helpers:$PATH"
     fi
   done
 
@@ -394,8 +400,8 @@ function setup() {
   fi
 
   tempdir="$(mktemp --directory -t "updoot_${global_start_time}_XXXXXX")" || {
-      log_msg "${Err}Failed to create tempdir"
-      return $C_SETUP_ERR
+    log_msg "${Err}Failed to create tempdir"
+    return $C_SETUP_ERR
   }
   vlog_msg "${Dbg}Created tempdir (${Cya}${tempdir}${RCol})"
 
@@ -494,6 +500,7 @@ function handle_exit() {
   cleanup
   unlock
 
+  # shellcheck disable=2254
   case $code in
   $C_USAGE | $C_USAGE_ERR | $C_SETUP_ERR | $C_CONFIG_ERR)
     exit $code
@@ -547,13 +554,17 @@ export -f provider_usage
 function register_provider() {
   local func name
   local -i hidden
+  local -a vars=()
 
   local opt OPTARG OPTIND
   OPTIND=1
-  while getopts ":h" opt "$@"; do
+  while getopts ":hv:" opt "$@"; do
     case "$opt" in
     h)
       hidden=1
+      ;;
+    v)
+      vars+=("$OPTARG")
       ;;
     \?)
       log_msg "${Err}register_provider: invalid option ${Yel}${opt}${RCol}"
@@ -597,6 +608,10 @@ function register_provider() {
     PROVIDERS_USAGE["$name"]="$(cat)"
   fi
 
+  if [[ ${#vars[@]} -gt 0 ]]; then
+    PROVIDERS_VARS["$name"]="$(printf '%s\n' "${vars[@]}")"
+  fi
+
   if [[ "$name" != "$func" ]]; then
     vlog_msg "${Dbg}Registered provider: ${Cya}${name}${RCol} -> ${Pur}${func}${RCol}${hidden:+ (${Yel}hidden${RCol})}"
   else
@@ -604,6 +619,8 @@ function register_provider() {
   fi
 }
 export -f register_provider
+
+# --- task pool
 
 # --- application logic
 
@@ -888,10 +905,20 @@ function main() {
 
     log_msg "${Ifo}(${Cya}${update_index}${RCol}/${Cya}${update_total}${RCol}) ${Cya}$provider${RCol}${lastupdate_msg}..."
 
-    mapfile -t cmd << EOF
+    local -a cmd=()
+    mapfile -O "${#cmd[@]}" -t cmd << EOF
       set -euo pipefail
       IFS=$'\\n\\t'
       trap 'handle_sig -cx $C_INT INT' INT
+EOF
+    if [[ -v PROVIDERS_VARS["$provider"] ]]; then
+      while read -r v; do
+        if [[ -v "$v" ]]; then
+          cmd+=("$(declare -p "$v")")
+        fi
+      done <<< "${PROVIDERS_VARS["$provider"]}"
+    fi
+    mapfile -O "${#cmd[@]}" -t cmd << EOF
       $(declare -f "${func?}")
       $(declare -p PROVIDERS_USAGE)
       $func $(printf '"-%s" ' "${opts[@]}")
@@ -901,7 +928,7 @@ EOF
       vlog_msg "\t${Yel}${l}${RCol}"
     done
     set +e
-    SHELL="/bin/bash" script -qec "${cmd[*]}" "${logdir}/${provider}_${start_time}.log"
+    SHELL="$(command -v bash)" script -qec "${cmd[*]}" "${logdir}/${provider}_${start_time}.log"
     code="$?"
     set -e
     unset -v cmd
@@ -914,6 +941,7 @@ EOF
     end_time="$(date +%s)"
     elapsed=$((end_time - start_time))
 
+    # shellcheck disable=2254
     case ${code} in
     0)
       update_success=$((update_success + 1))
@@ -999,10 +1027,10 @@ EOF
   return 0
 }
 
-trap 'handle_exit'     EXIT
+trap 'handle_exit' EXIT
 trap 'handle_sig TERM' TERM
-trap 'handle_sig ILL'  ILL
-trap 'handle_sig HUP'  HUP
-trap 'handle_sig INT'  INT
+trap 'handle_sig ILL' ILL
+trap 'handle_sig HUP' HUP
+trap 'handle_sig INT' INT
 
 main "$@"
