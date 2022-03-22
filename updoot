@@ -2,20 +2,8 @@
 
 # updoot unifies the update process for your entire system
 #
-# Copyright (c) 2018-2020 Maddison Hellstrom (github.com/b0o)
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# Copyright (c) 2018-2022 Maddison Hellstrom <github.com/b0o>
+# MIT License
 
 set -euo pipefail
 IFS=$'\n\t'
@@ -33,8 +21,8 @@ declare -xg prog="updoot"
 declare -xg version="v0.0.1"
 declare -xg authors=("Maddison Hellstrom <https://github.com/b0o>")
 declare -xg repository="https://github.com/b0o/updoot"
-declare -xg license="GPL-3.0-or-later"
-declare -xg license_url="https://www.gnu.org/licenses/gpl-3.0.txt"
+declare -xg license="MIT"
+declare -xg license_url="https://mit-license.org"
 
 # colors
 declare -xg RCol='\e[0m'

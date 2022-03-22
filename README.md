@@ -1,4 +1,4 @@
-updoot ![status: alpha](https://img.shields.io/badge/status-alpha-red?style=flat) [![version](https://img.shields.io/github/v/tag/b0o/updoot?style=flat&color=yellow&label=version&sort=semver)](https://github.com/b0o/updoot/releases) [![license: gpl-3.0-or-later](https://img.shields.io/github/license/b0o/updoot?style=flat&color=green)](https://opensource.org/licenses/GPL-3.0)
+updoot ![status: alpha](https://img.shields.io/badge/status-alpha-red?style=flat) [![version](https://img.shields.io/github/v/tag/b0o/updoot?style=flat&color=yellow&label=version&sort=semver)](https://github.com/b0o/updoot/releases) [![license: MIT](https://img.shields.io/github/license/b0o/updoot?style=flat&color=green)](https://opensource.org/licenses/MIT)
 ===
 
 
@@ -68,9 +68,9 @@ Available Providers: (* indicates provider is enabled by default)
     Dependencies:
       Primary: (at least one; ordered by precedence)
         - yay (aur: yay) (https://github.com/Jguer/yay)
-        or
-        - pacman
+        - paru (aur: paru) (https://github.com/Morganamilo/paru)
       Required:
+        - pacman
         - sudo (arch-repo: sudo) (https://www.sudo.ws)
       Optional:
         - archlinux-news
@@ -91,6 +91,7 @@ Available Providers: (* indicates provider is enabled by default)
       Enable tasks exclusively:
       :n   archlinux-news
       :y   yay
+      :u   paru
       :p   pacman
       :m   archlinux-mirrors
       :d   pacdiff
@@ -98,6 +99,7 @@ Available Providers: (* indicates provider is enabled by default)
       Exclude tasks:
       :N   archlinux-news
       :Y   yay
+      :U   paru
       :P   pacman
       :M   archlinux-mirrors
       :D   pacdiff
@@ -106,6 +108,7 @@ Available Providers: (* indicates provider is enabled by default)
       $UPDOOT_ARCHLINUX_MIRROR_COUNTRY (country name) [United States]
         Country to select mirrors from.
         Must match the format used in /etc/pacman.d/mirrorlist
+      $UPDOOT_ARCHLINUX_PREFERRED_HELPER ("yay", "paru", "none", or "") [paru]
 
   * cabal
     A system for building and packaging Haskell libraries and programs
@@ -174,6 +177,17 @@ Available Providers: (* indicates provider is enabled by default)
     Dependencies:
       - cpan (arch-repo: perl) (https://www.perl.org)
 
+  * tpm
+    Tmux Plugin Manager
+    Dependencies:
+      - tmux (arch-repo: tmux) (https://github.com/tmux/tmux)
+      - tpm (https://github.com/tmux-plugins/tpm)
+
+    Environment Variables:
+      $UPDOOT_TPM_PATH [$XDG_CONFIG_HOME/tmux/plugins//tpm]
+      Path to the tpm plugin's directory
+      If not set, the tpm provider will try to find your tpm directory.
+
   * opam
     A package manager for the OCaml programming language
     Dependencies:
@@ -194,7 +208,12 @@ Available Providers: (* indicates provider is enabled by default)
       Required:
         - zsh (arch-repo: zsh) (https://zsh.org)
 
-  * go
+  * gh
+    GitHub CLI extensions.
+    Dependencies:
+      - gh (arch-repo: github-cli) (https://github.com/cli/cli)
+
+  - go
     A package manager for the Go programming language
     Dependencies:
       Primary:
@@ -245,8 +264,8 @@ Available Providers: (* indicates provider is enabled by default)
           A cargo subcommand for checking and applying updates to installed executables
 
 
-(c) 2019-2021 Maddison Hellstrom <https://github.com/b0o>
+(c) 2019-2022 Maddison Hellstrom <https://github.com/b0o>
 
-GPL-3.0-or-later License (https://www.gnu.org/licenses/gpl-3.0.txt)
+MIT License (https://mit-license.org)
 ```
 

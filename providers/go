@@ -2,20 +2,8 @@
 
 # updoot unifies the update process for your entire system
 #
-# Copyright (c) 2018-2020 Maddison Hellstrom (github.com/b0o)
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# Copyright (c) 2018-2022 Maddison Hellstrom <github.com/b0o>
+# MIT License
 
 set -euo pipefail
 IFS=$'\n\t'
@@ -208,3 +196,405 @@ Environment Variables:
 
       - replace: New executables will replace old ones in GOBIN
 EOF
+
+##!/usr/bin/env bash
+
+## updoot unifies the update process for your entire system
+##
+## Copyright (c) 2018-2020 Maddison Hellstrom <github.com/b0o>
+##
+## This program is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+#set -euo pipefail
+#IFS=$'\n\t'
+
+## Force shellcheck to source ../updoot
+#true || source "../updoot"
+
+#declare -xg UPDOOT_GO_GOPACKAGES_PATH="${UPDOOT_GO_GOPACKAGES_PATH:-$HOME/.gopackages}"
+
+#if [[ ! -v UPDOOT_GO_NPROC ]]; then
+#  declare -xgi UPDOOT_GO_NPROC
+#  UPDOOT_GO_NPROC=$(nproc) || UPDOOT_GO_NPROC=1
+#fi
+
+## function update_go_coproc() {
+##   local pkg_cmd pkg_name pkg_str
+##   pkg_str="${pkgs_str["$pkg"]}"
+##   pkg_name="${pkgs_name["$pkg"]}"
+##   pkg_cmd="${pkgs_cmd["$pkg"]}"
+##
+##   set +o pipefail
+##   log_msg "${Ifo}Getting ${pkg_str}..."
+##
+##   local stderr_temp
+##   stderr_temp="$(mktemp -p "$tempdir" -t "go_${pkg_name}.XXXXXX")"
+##   # shellcheck disable=SC2064
+##   trap "rm $stderr_temp" EXIT
+##   GOBIN="$path_gobin_temp" eval "$pkg_cmd" 2> "$stderr_temp" > /dev/null || {
+##     cat "$stderr_temp" >&2
+##     log_msg "${Wrn}Failed updating/installing package ${pkg_str}"
+##     return $C_SKIP
+##   }
+##   log_msg "${Ifo}Finished ${pkg_str}"
+##   return 0
+## }
+
+#function update_go_cmd_pool_watch() {
+#  local -i t="$1"
+#  vlog_msg "${Dbg}watcher start ${Cya}${t}${RCol}"
+
+#  local -i r=$t
+#  local -i i=0
+#  local -i worker
+#  local -i code
+
+#  # while ((i < t)); do
+#  while ((i < t)); do
+#    read -rd ':' worker || break
+#    read -r code || break
+#    i=$((i + 1))
+#    r=$((r - 1))
+#    echo "$((t - i)):$worker:$code"
+#  done
+
+#  vlog_msg "${Dbg}watcher end: { r: ${Cya}${r}${RCol}, t: ${Cya}${t}${RCol}, i: ${Cya}${i}${RCol} }"
+#}
+#declare -xf update_go_cmd_pool_watch
+
+#function update_go_cmd_pool() {
+#  coproc {
+#    update_go_cmd_pool_watch ${#pkgs[@]}
+#  }
+
+#  vlog_msg "${Dbg}COPROC (${Cya}${COPROC[0]}${RCol}, ${Cya}${COPROC[1]}${RCol})"
+#  vlog_msg "${Dbg}COPROC_PID ${Cya}${COPROC_PID}${RCol}"
+
+#  local pkg
+#  local -i i=1
+#  local -i r=0
+#  for pkg in "${pkgs[@]}"; do
+#    vlog_msg "${Dbg}${Yel}$i${RCol} COPROC ${Cya}${COPROC[0]} ${COPROC[1]}${RCol}"
+#    until ((r < UPDOOT_GO_NPROC)); do
+#      local -i n worker code
+#      # read -r res <&"${COPROC[0]}"
+#      read -rd ':' n <&"${COPROC[0]}" || break
+#      read -rd ':' worker <&"${COPROC[0]}" || break
+#      read -r code <&"${COPROC[0]}" || break
+#      # echo "worker $worker finished with code $code ($((i + 1))/$t)" >&2
+#      vlog_msg "worker ${Cya}${worker}${RCol} (${Cya}${n}${RCol}) finished with code ${Cya}${code}${RCol}" >&2
+#      r=$((r - 1))
+#    done
+#    ({
+#      local pkg_cmd pkg_name pkg_str
+#      pkg_str="${pkgs_str["$pkg"]}"
+#      pkg_name="${pkgs_name["$pkg"]}"
+#      pkg_cmd="${pkgs_cmd["$pkg"]}"
+
+#      vlog_msg "${Dbg}update_go_cmd_worker start ${Cya}${i}${RCol}/${Cya}${#pkgs[@]}${RCol}"
+#      vlog_msg "${Dbg}  pkg_str ${Cya}${pkg_str}${RCol}"
+#      vlog_msg "${Dbg}  pkg_name ${Cya}${pkg_name}${RCol}"
+#      vlog_msg "${Dbg}  pkg_cmd ${Cya}${pkg_cmd}${RCol}"
+
+#      # set +o pipefail
+#      log_msg "${Ifo}Getting ${pkg_str}..."
+
+#      local stderr_temp
+#      stderr_temp="$(mktemp -p "$tempdir" -t "go_${pkg_name}.XXXXXX")"
+#      trap "rm $stderr_temp" EXIT
+
+#      local -i code=0
+#      GOBIN="$path_gobin_temp" eval "$pkg_cmd" 2> "$stderr_temp" > /dev/null || code=$?
+
+#      if [[ $code -eq 0 ]]; then
+#        log_msg "${Ifo}Finished ${pkg_str}"
+#      else
+#        cat "$stderr_temp" >&2
+#        log_msg "${Wrn}Failed updating/installing package ${pkg_str}"
+#        # return $C_SKIP
+#        code=$C_SKIP
+#      fi
+
+#      echo "$i:$code" > "/proc/$$/fd/${COPROC[1]}"
+#    }) &
+#    i=$((i + 1))
+#    r=$((r + 1))
+#  done
+
+#  wait "$COPROC_PID"
+#}
+#declare -xf update_go_cmd_pool
+
+#function update_go_cmd_worker() {
+#  local pkg="$1"
+#  local pkg_str="${pkgs_str["$pkg"]}"
+#  local pkg_name="${pkgs_name["$pkg"]}"
+#  local pkg_cmd="${pkgs_cmd["$pkg"]}"
+
+#  set +o pipefail
+#  log_msg "${Ifo}Getting ${pkg_str}..."
+
+#  local stderr_temp
+#  stderr_temp="$(mktemp -p "$tempdir" -t "go_${pkg_name}.XXXXXX")"
+#  # shellcheck disable=SC2064
+#  trap "rm $stderr_temp" EXIT
+#  GOBIN="$path_gobin_temp" eval "$pkg_cmd" 2> "$stderr_temp" > /dev/null || {
+#    cat "$stderr_temp" >&2
+#    log_msg "${Wrn}Failed updating/installing package ${pkg_str}"
+#    return $C_SKIP
+#  }
+#  log_msg "${Ifo}Finished ${pkg_str}"
+#  return 0
+#}
+#declare -xf update_go_cmd_worker
+
+#function update_go() {
+#  if ! cmd_exists go; then
+#    return $C_DEP_NOTFOUND
+#  fi
+#  if [[ ! -r "$UPDOOT_GO_GOPACKAGES_PATH" ]]; then
+#    log_msg "${Err}Unable to read file ${Yel}${UPDOOT_GO_GOPACKAGES_PATH}${RCol} (${Cya}\$UPDOOT_GO_GOPACKAGES_PATH${RCol})"
+#    return $C_CONFIG_ERR
+#  fi
+
+#  # shellcheck disable=1090
+#  source "$UPDOOT_GO_GOPACKAGES_PATH"
+#  if [[ ! -v "GO_BIN_PKGS" || ${#GO_BIN_PKGS[@]} -eq 0 ]]; then
+#    log_msg "${Ifo}Nothing to do"
+#    return 0
+#  fi
+
+#  local path_gobin="${GOBIN:-}"
+#  [[ -n "$path_gobin" ]] || path_gobin="$(go env GOBIN)"
+#  [[ -n "$path_gobin" ]] || path_gobin="$(go env GOPATH)/bin"
+#  [[ -n "$path_gobin" && ! -e "$path_gobin" ]] && mkdir -p "$path_gobin"
+
+#  # Sanity check: make sure path_gobin is an existing directory that isn't /
+#  [[ -z "$path_gobin" || ! -d "$path_gobin" ]] && {
+#    log_msg "${Err}refusing to use '${Yel}${path_gobin}${RCol}' as ${Cya}path_gobin${RCol}"
+#    return 1
+#  }
+
+#  local path_gobin_temp
+#  path_gobin_temp="$(mktemp -p "$tempdir" -dt "go_gobin.XXXXXX")"
+
+#  # Sanity check: make sure path_gobin_temp is an existing empty empty directory that isn't /
+#  [[ -z "$path_gobin_temp" || ! -d "$path_gobin_temp" || "$path_gobin_temp" -ef / || -n "$(ls -A "$path_gobin_temp")" ]] && {
+#    log_msg "${Err}refusing to use '${Yel}${path_gobin_temp}${RCol}' as ${Cya}path_gobin_temp${RCol}"
+#    # rmdir "$path_gobin_temp"
+#    return 1
+#  }
+
+#  local update_behavior="${GO_UPDATE_BEHAVIOR:-replace}"
+#  if ! [[ $update_behavior == "purge" || $update_behavior == "replace" ]]; then
+#    log_msg "${Err}Invalid value for '${Cya}GO_UPDATE_BEHAVIOR${RCol}': '${Yel}${update_behavior}${RCol}' - expected one of ${Pur}purge${RCol}, ${Pur}replace${RCol}"
+#    # rmdir "$path_gobin_temp"
+#    return $C_CONFIG_ERR
+#  fi
+
+#  local gocmd="go get -u -v"
+
+#  local gobincmd="gobin -u"
+#  local gobin=0
+#  if cmd_exists gobin; then
+#    gobin=1
+#  fi
+
+#  vlog_msg "${Dbg}UPDOOT_GO_NPROC ${Cya}$UPDOOT_GO_NPROC${RCol}"
+
+#  local -a pkgs
+#  local -A pkgs_str
+#  local -A pkgs_name
+#  local -A pkgs_cmd
+#  local pkg
+#  for pkg in "${GO_BIN_PKGS[@]}"; do
+#    local pkg_cmd pkg_name pkg_str pkg_ver
+#    pkgpath="${pkg//@*/}"
+#    pkg_name="${pkgpath//*\//}"
+#    pkg_ver="$(awk 'match($0, /@.*$/){ v=substr($0, RSTART); if(v == "@"){ v="@latest" }; print v }' <<< "$pkg")"
+#    pkg_str="${Cya}${pkgpath}${Yel}${pkg_ver}${RCol}"
+
+#    if [[ $pkg_ver != "" ]]; then
+#      if [[ $gobin -eq 1 ]]; then
+#        pkg_cmd="$gobincmd ${pkgpath}${pkg_ver}"
+#      else
+#        log_msg "${Err}${pkg_str}: ${Cya}gobin${RCol} is required for ${Cya}package${Yel}@version${RCol}-style packages"
+#        return $C_DEP_NOTFOUND
+#      fi
+#    else
+#      pkg_cmd="$gocmd ${pkgpath}"
+#    fi
+#    pkgs+=("$pkg")
+#    pkgs_str["$pkg"]="$pkg_str"
+#    pkgs_name["$pkg"]="$pkg_name"
+#    pkgs_cmd["$pkg"]="$pkg_cmd"
+#  done
+
+#  # XXX: there is probably a race condition where multiple calls to `go get`
+#  # may try to update the same dependency at the same time, leading to
+#  # `git pull` complaining about overwriting local changes. Not sure how to
+#  # fix other than reverting to updating packages serially
+#  local -i success=0
+#  local -i fail=0
+#  # local -i n=0
+
+#  # local -a jobs=
+#  # pkg_str="${pkgs_str["$pkg"]}"
+#  # pkg_name="${pkgs_name["$pkg"]}"
+#  # pkg_cmd="${pkgs_cmd["$pkg"]}"
+
+#  update_go_cmd_pool
+
+#  # local -i i=0
+#  # while [[ $i -le ${#pkgs[@]} ]]; do
+#  #   n="$(jobs -r | wc -l)"
+#  #   # for pkg in "${pkgs[@]}"; do
+#  #   if [[ $n -ge $UPDOOT_GO_NPROC ]]; then
+#  #     echo "waiting (n=$n, i=$i)..." >&2
+#  #
+#  #     for job in $(jobs -pr); do
+#  #       true
+#  #     done
+#  #     #     if wait -f "$job"; then
+#  #     #       success=$((success + 1))
+#  #     #     else
+#  #     #       fail=$((fail + 1))
+#  #     #     fi
+#  #
+#  #     # if [[ $i -eq $((${#pkgs[@]} - 1)) ]]; then
+#  #     #   while
+#  #     #   # for job in $(jobs -pr); do
+#  #     #     if wait -f "$job"; then
+#  #     #       success=$((success + 1))
+#  #     #     else
+#  #     #       fail=$((fail + 1))
+#  #     #     fi
+#  #     #     # n=$((n - 1))
+#  #     #   # done
+#  #     # else
+#  #     #   if wait -n; then
+#  #     #     success=$((success + 1))
+#  #     #   else
+#  #     #     fail=$((fail + 1))
+#  #     #   fi
+#  #     #   # n=$((n - 1))
+#  #     # fi
+#  #     continue
+#  #   fi
+#  #
+#  #   if [[ $i -ge ${#pkgs[@]} ]]; then
+#  #     break
+#  #   fi
+#  #
+#  #   pkg="${pkgs[$i]}"
+#  #   # ({
+#  #   #   local pkg_cmd pkg_name pkg_str
+#  #   #   pkg_str="${pkgs_str["$pkg"]}"
+#  #   #   pkg_name="${pkgs_name["$pkg"]}"
+#  #   #   pkg_cmd="${pkgs_cmd["$pkg"]}"
+#  #   #
+#  #   #   set +o pipefail
+#  #   #   log_msg "${Ifo}Getting ${pkg_str}..."
+#  #   #
+#  #   #   local stderr_temp
+#  #   #   stderr_temp="$(mktemp -p "$tempdir" -t "go_${pkg_name}.XXXXXX")"
+#  #   #   # shellcheck disable=SC2064
+#  #   #   trap "rm $stderr_temp" EXIT
+#  #   #   GOBIN="$path_gobin_temp" eval "$pkg_cmd" 2> "$stderr_temp" > /dev/null || {
+#  #   #     cat "$stderr_temp" >&2
+#  #   #     log_msg "${Wrn}Failed updating/installing package ${pkg_str}"
+#  #   #     return $C_SKIP
+#  #   #   }
+#  #   #   log_msg "${Ifo}Finished ${pkg_str}"
+#  #   #   return 0
+#  #   # }) &
+#  #   i=$((i + 1))
+#  #   # n=$((n + 1))
+#  # done
+
+#  # local -i success=0
+#  # local -i fail=0
+#  # for job in $(jobs -pr); do
+#  #   if wait -f "$job"; then
+#  #     success=$((success + 1))
+#  #   else
+#  #     fail=$((fail + 1))
+#  #   fi
+#  # done
+
+#  local statusmsg="${Blu}${success} updated${RCol}"
+#  if [[ $fail -gt 0 ]]; then
+#    statusmsg+=", ${Red}${fail} failed${RCol}"
+#  fi
+
+#  if [[ $success -eq 0 ]]; then
+#    log_msg "${Wrn}No Go packages were updated (${statusmsg})"
+#    find "$path_gobin_temp" -mindepth 1 -maxdepth 1 -type f -executable -exec rm '{}' \;
+#    # rmdir "$path_gobin_temp"
+#    if [[ $fail -gt 0 ]]; then
+#      return $C_UPDATE_ERR
+#    fi
+#    return 0
+#  fi
+
+#  if [[ "$update_behavior" == "purge" ]]; then
+#    log_msg "${Ifo}Purging '${Cya}$path_gobin${RCol}'"
+#    find "$path_gobin" -mindepth 1 -maxdepth 1 -type f -executable -exec rm '{}' \;
+#  fi
+#  vlog_msg "${Dbg}Moving executables from '${Cya}$path_gobin_temp${RCol}' to '${Cya}$path_gobin${RCol}'"
+#  find "$path_gobin_temp" -mindepth 1 -maxdepth 1 -type f -executable -exec mv '{}' "$path_gobin" \;
+#  # rmdir "$path_gobin_temp"
+
+#  log_msg "${Ifo}Go update complete (${statusmsg})"
+#  if [[ $fail -gt 0 ]]; then
+#    return $C_SKIP
+#  fi
+#  return 0
+#}
+
+#register_provider update_go go << EOF
+#A package manager for the Go programming language
+#Dependencies:
+#  Primary:
+#    - go (arch-repo: go) (https://golang.org/)
+#  Optional:
+#    - gobin (https://github.com/myitcv/gobin)
+#      The gobin command installs/runs main packages
+#      Required for path@version packages, as described in UPDOOT_GO_GOPACKAGES_PATH
+
+#Environment Variables:
+#  \$UPDOOT_GO_GOPACKAGES_PATH (directory) [$UPDOOT_GO_GOPACKAGES_PATH]
+#    Path to a Bash script file exporting the following variables:
+
+#    - GO_BIN_PKGS (array) [required]
+#      Array items consist of a Go package path, optionally followed by an @, optionally followed by a version.
+#      A package followed by an @ with no version implies the latest version.
+#      A package not followed by an @ will be fetched with go get rather than gobin
+
+#    - GOBIN (path) [optional]
+#      See https://golang.org/cmd/go/#hdr-Environment_variables
+#      If unset,
+
+#    - GO_UPDATE_BEHAVIOR (string) [default: replace]
+#      One of the following values:
+
+#      - purge: All executables in GOBIN will be removed and new executables
+#               will be moved in. This has the effect of only keeping
+#               executables from packages that appear in GO_BIN_PKGS after an
+#               update, so any executables from manually installed packages or
+#               packages that are removed from the GO_BIN_PKGS array will be
+#               removed.
+
+#      - replace: New executables will replace old ones in GOBIN
+#EOF
