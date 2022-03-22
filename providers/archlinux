@@ -24,38 +24,42 @@ IFS=$'\n\t'
 true || source "../updoot"
 
 declare -xg UPDOOT_ARCHLINUX_MIRROR_COUNTRY="${UPDOOT_ARCHLINUX_MIRROR_COUNTRY:-United States}"
+declare -xg UPDOOT_ARCHLINUX_PREFERRED_HELPER="${UPDOOT_ARCHLINUX_PREFERRED_HELPER:-paru}"
 
 function update_archlinux() {
-  if ! cmd_exists pacman &> /dev/null; then
-    return $C_DEP_NOTFOUND
+  if ! cmd_exists pacman &>/dev/null; then
+    return "$C_DEP_NOTFOUND"
   fi
   local -i tasklist_modified=0
   local -i task_news=1
   local -i task_yay=1
+  local -i task_paru=1
   local -i task_pacman=1
   local -i task_mirrorlist=1
   local -i task_pacdiff=1
   local opt OPTARG OPTIND
   OPTIND=1
-  while getopts ":hanypmdNYPMD" opt "$@"; do
+  while getopts ":hanypmduNYPMDU" opt "$@"; do
     case "$opt" in
     h)
       # shellcheck disable=2119
       provider_usage
-      return $C_USAGE
+      return "$C_USAGE"
       ;;
     a)
       task_news=1
       task_yay=1
+      task_paru=1
       task_pacman=1
       task_mirrorlist=1
       task_pacdiff=1
       ;;
-    n | y | p | m | d)
+    n | y | p | m | d | u)
       if [[ $tasklist_modified -eq 0 ]]; then
         tasklist_modified=1
         task_news=0
         task_yay=0
+        task_paru=0
         task_pacman=0
         task_mirrorlist=0
         task_pacdiff=0
@@ -72,6 +76,12 @@ function update_archlinux() {
       ;;
     Y)
       task_yay=0
+      ;;
+    u)
+      task_paru=1
+      ;;
+    U)
+      task_paru=0
       ;;
     p)
       task_pacman=1
@@ -92,11 +102,33 @@ function update_archlinux() {
       task_pacdiff=0
       ;;
     \?)
-      log_msg "${Err}${Cya}archlinux${RCol}: invalid option: ${Yel}${OPTARG}${RCol}"
-      return $C_USAGE_ERR
+      log_msg "$Err${Cya}archlinux$RCol: invalid option: $Yel$OPTARG$RCol"
+      return "$C_USAGE_ERR"
       ;;
     esac
   done
+
+  if [[ $task_paru -eq 1 && $task_yay -eq 1 ]]; then
+    case "$UPDOOT_ARCHLINUX_PREFERRED_HELPER" in
+      yay)
+        task_yay=1
+        task_paru=0
+        ;;
+      paru)
+        task_yay=0
+        task_paru=1
+        ;;
+      none)
+        task_yay=0
+        task_paru=0
+        ;;
+      "")
+        ;;
+      *)
+        log_msg "${Err}Invalid value for \$UPDOOT_ARCHLINUX_PREFERRED_HELPER: ${UYel}${UPDOOT_ARCHLINUX_PREFERRED_HELPER}$RCol"
+        return "$C_CONFIG_ERR"
+    esac
+  fi
 
   local newscachefile newsout newsdiff
   if ((task_news)); then
@@ -108,30 +140,32 @@ function update_archlinux() {
       newsout="$(archlinux-news 10)"
       newsdiff=$(diff --old-line-format='' --unchanged-line-format='' --new-line-format='%L' -Z "$newscachefile" <(echo "$newsout")) || :
       if [[ $newsdiff != "" ]]; then
-        log_msg "${Wrn}New '${UCya}https://archlinux.org${RCol}' news item(s) since last update:"
-        log_msg "${Red}${newsdiff}${RCol}"
+        log_msg "${Wrn}New '${UCya}https://archlinux.org$RCol' news item(s) since last update:"
+        log_msg "$Red$newsdiff$RCol"
         if [[ $(choose "Continue with archlinux update?") != "y" ]]; then
           log_msg "${Wrn}Skipping..."
-          return $C_SKIP
+          return "$C_SKIP"
         fi
       else
-        log_msg "${Ifo}No unread news items from ${UCya}https://archlinux.org${RCol}"
+        log_msg "${Ifo}No unread news items from ${UCya}https://archlinux.org$RCol"
       fi
     else
-      log_msg "${Wrn}${Yel}archlinux-news${RCol} helper script not found; It is recommended to check ${UCya}https://archlinux.org${RCol} for news prior to updating"
+      log_msg "$Wrn${Yel}archlinux-news$RCol helper script not found; It is recommended to check ${UCya}https://archlinux.org$RCol for news prior to updating"
       if [[ "$(choose "Continue with archlinux update?")" != "y" ]]; then
-        return $C_SKIP
+        return "$C_SKIP"
       fi
     fi
   fi
 
-  if ((task_yay || task_pacman)); then
-    if ((task_yay)) && cmd_exists yay; then
+  if ((task_yay || task_paru || task_pacman)); then
+    if ((task_paru)) && cmd_exists paru; then
+      run_cmd paru -Syyu
+    elif ((task_yay)) && cmd_exists yay; then
       run_cmd yay -Syyu
     elif ((task_pacman)) && cmd_exists pacman; then
       run_cmd sudo pacman -Syu
     else
-      return $C_DEP_NOTFOUND
+      return "$C_DEP_NOTFOUND"
     fi
   fi
 
@@ -145,18 +179,18 @@ function update_archlinux() {
   fi
 
   if [[ -n "${newsout:-}" ]]; then
-    echo "$newsout" > "$newscachefile"
+    echo "$newsout" >"$newscachefile"
   fi
   return 0
 }
-register_provider update_archlinux archlinux << EOF
+register_provider update_archlinux archlinux <<EOF
 Updates Arch Linux & performs routine maintenence like updating mirrorlist & managing .pac{new,save} files
 Dependencies:
   Primary: (at least one; ordered by precedence)
     - yay (aur: yay) (https://github.com/Jguer/yay)
-    or
-    - pacman
+    - paru (aur: paru) (https://github.com/Morganamilo/paru)
   Required:
+    - pacman
     - sudo (arch-repo: sudo) (https://www.sudo.ws)
   Optional:
     - archlinux-news
@@ -177,6 +211,7 @@ Options:
   Enable tasks exclusively:
   :n   archlinux-news
   :y   yay
+  :u   paru
   :p   pacman
   :m   archlinux-mirrors
   :d   pacdiff
@@ -184,6 +219,7 @@ Options:
   Exclude tasks:
   :N   archlinux-news
   :Y   yay
+  :U   paru
   :P   pacman
   :M   archlinux-mirrors
   :D   pacdiff
@@ -192,5 +228,6 @@ Environment Variables:
   \$UPDOOT_ARCHLINUX_MIRROR_COUNTRY (country name) [$UPDOOT_ARCHLINUX_MIRROR_COUNTRY]
     Country to select mirrors from.
     Must match the format used in /etc/pacman.d/mirrorlist
+  \$UPDOOT_ARCHLINUX_PREFERRED_HELPER ("yay", "paru", "none", or "") [$UPDOOT_ARCHLINUX_PREFERRED_HELPER]
 
 EOF
