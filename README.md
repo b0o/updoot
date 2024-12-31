@@ -58,7 +58,7 @@ Dependencies:
      - git (https://git-scm.com)
 
 Available Providers: (* indicates provider is enabled by default)
-  * yarn
+  - yarn
     Fast, reliable, and secure dependency management for Node.js
     Dependencies:
       - yarn (arch-repo: yarn) (https://yarnpkg.com)
@@ -110,12 +110,12 @@ Available Providers: (* indicates provider is enabled by default)
         Must match the format used in /etc/pacman.d/mirrorlist
       $UPDOOT_ARCHLINUX_PREFERRED_HELPER ("yay", "paru", "none", or "") [paru]
 
-  * cabal
+  - cabal
     A system for building and packaging Haskell libraries and programs
     Dependencies:
       - cabal-install (arch-repo: cabal-install) (https://github.com/haskell/cabal/blob/master/cabal-install/README.md)
 
-  * nvim
+  - nvim
     The Neovim text editor
     Dependencies:
       - nvim (arch-repo: neovim) (https://neovim.io)
@@ -153,7 +153,7 @@ Available Providers: (* indicates provider is enabled by default)
 
   - dummy_user
 
-  * nix
+  - nix
     A purely functional package manager
     Dependencies:
       Required:
@@ -167,10 +167,30 @@ Available Providers: (* indicates provider is enabled by default)
     Dependencies:
       - asdf (aur: asdf-vm) (https://github.com/asdf-vm/asdf)
 
+  * pnpm
+    Fast, disk space efficient package manager for Node.js
+    Dependencies:
+      - pnpm (aur: pnpm) (https://pnpm.io/)
+
+  * mise
+    mise-en-place - The front-end to your dev env
+    Dependencies:
+      - mise (https://mise.jdx.dev/)
+
+  * uv
+    An extremely fast Python package and project manager, written in Rust.
+    Dependencies:
+      - uv (https://docs.astral.sh/uv/)
+
   * gem
     A package manager for the Ruby programming language
     Dependencies:
       - gem (arch-repo: rubygems) (https://rubygems.org/)
+
+  * aqua
+    Declarative CLI Version Manager. Unify tool versions in teams, projects, and CI. Easy, painless, and secure.
+    Dependencies:
+      - aqua (https://aquaproj.github.io/)
 
   - cpan
     A repository of software modules written in the Perl programming language
@@ -188,7 +208,7 @@ Available Providers: (* indicates provider is enabled by default)
       Path to the tpm plugin's directory
       If not set, the tpm provider will try to find your tpm directory.
 
-  * opam
+  - opam
     A package manager for the OCaml programming language
     Dependencies:
       - opam (arch-repo: opam) (https://opam.ocaml.org/)
@@ -264,7 +284,7 @@ Available Providers: (* indicates provider is enabled by default)
           A cargo subcommand for checking and applying updates to installed executables
 
 
-(c) 2019-2022 Maddison Hellstrom <https://github.com/b0o>
+(c) 2019-2024 Maddison Hellstrom <https://github.com/b0o>
 
 MIT License (https://mit-license.org)
 ```
