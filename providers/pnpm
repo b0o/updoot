@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+# updoot unifies the update process for your entire system
+#
+# Copyright (c) 2018-2022 Maddison Hellstrom <github.com/b0o>
+# MIT License
+
+set -euo pipefail
+IFS=$'\n\t'
+
+# Force shellcheck to source ../updoot
+true || source "../updoot"
+
+function update_pnpm() {
+  if cmd_exists pnpm; then
+    run_cmd pnpm update --global --interactive --latest
+  else
+    return "$C_DEP_NOTFOUND"
+  fi
+}
+register_provider update_pnpm pnpm <<EOF
+Fast, disk space efficient package manager for Node.js
+Dependencies:
+  - pnpm (aur: pnpm) (https://pnpm.io/)
+EOF
