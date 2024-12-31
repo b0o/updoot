@@ -14,6 +14,8 @@ true || source "../updoot"
 function update_pip() {
   if cmd_exists pip; then
     local outdated
+    # Update pip itself
+    run_cmd pip install --upgrade pip
     outdated="$(pip list --user --outdated --format=json)" || return $C_UPDATE_ERR
     if [[ -n "$outdated" ]]; then
       echo "$outdated" > "$logdir/pip-outdated_${global_start_time}.json"
