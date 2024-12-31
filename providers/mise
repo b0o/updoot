@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+# updoot unifies the update process for your entire system
+#
+# Copyright (c) 2018-2024 Maddison Hellstrom <github.com/b0o>
+# MIT License
+
+set -euo pipefail
+IFS=$'\n\t'
+
+# Force shellcheck to source ../updoot
+true || source "../updoot"
+
+function update_mise() {
+  if cmd_exists mise; then
+    run_cmd mise self-update
+    run_cmd mise plugins update
+    run_cmd mise upgrade
+  else
+    return "$C_DEP_NOTFOUND"
+  fi
+}
+register_provider update_mise mise <<EOF
+mise-en-place - The front-end to your dev env
+Dependencies:
+  - mise (https://mise.jdx.dev/)
+EOF
