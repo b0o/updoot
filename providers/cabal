@@ -13,12 +13,12 @@ true || source "../updoot"
 
 function update_cabal() {
   if cmd_exists cabal; then
-    run_cmd cabal v1-update
+    run_cmd cabal update
   else
-    return $C_DEP_NOTFOUND
+    return "$C_DEP_NOTFOUND"
   fi
 }
-register_provider update_cabal cabal << EOF
+register_provider update_cabal cabal <<EOF
 A system for building and packaging Haskell libraries and programs
 Dependencies:
   - cabal-install (arch-repo: cabal-install) (https://github.com/haskell/cabal/blob/master/cabal-install/README.md)
