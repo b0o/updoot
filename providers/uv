@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+# updoot unifies the update process for your entire system
+#
+# Copyright (c) 2018-2024 Maddison Hellstrom <github.com/b0o>
+# MIT License
+
+set -euo pipefail
+IFS=$'\n\t'
+
+# Force shellcheck to source ../updoot
+true || source "../updoot"
+
+function update_uv() {
+  if cmd_exists uv; then
+    run_cmd uv self update
+  else
+    return "$C_DEP_NOTFOUND"
+  fi
+}
+register_provider update_uv uv <<EOF
+An extremely fast Python package and project manager, written in Rust.
+Dependencies:
+  - uv (https://docs.astral.sh/uv/)
+EOF
